@@ -9,19 +9,26 @@ import {
 } from "@hrmssuite/persistence";
 
 export class EmployeeDAO {
-  public async createEmployee(data: EmployeeData): Promise<Employee> {
+  public async createEmployee(
+    data: EmployeeData,
+    companyId: string,
+  ): Promise<Employee> {
     try {
-      const employee = await EmployeeModel.create({ data });
+      const employee = await EmployeeModel.create({ data, companyId });
       return employee;
     } catch (error) {
       throw error;
     }
   }
 
-  public async findById(id: string): Promise<Employee | null> {
+  public async findById(
+    id: string,
+    companyId: string,
+  ): Promise<Employee | null> {
     try {
       const employee = await EmployeeModel.findOne({
         _id: id,
+        companyId,
         "meta.isDeleted": false,
       })
         .populate("data.job.designation")
@@ -33,9 +40,12 @@ export class EmployeeDAO {
     }
   }
 
-  public async findAll(): Promise<Employee[]> {
+  public async findAll(companyId: string): Promise<Employee[]> {
     try {
-      const employees = await EmployeeModel.find({ "meta.isDeleted": false })
+      const employees = await EmployeeModel.find({
+        companyId,
+        "meta.isDeleted": false,
+      })
         .populate("data.job.designation")
         .populate("data.job.department");
       return employees;
@@ -47,12 +57,23 @@ export class EmployeeDAO {
   public async updateEmployee(
     id: string,
     data: Partial<EmployeeData>,
+    companyId: string,
   ): Promise<Employee | null> {
     try {
+      const setFields: Record<string, any> = {};
+      if (data.basic !== undefined) setFields["data.basic"] = data.basic;
+      if (data.job !== undefined) setFields["data.job"] = data.job;
+      if (data.compensation !== undefined)
+        setFields["data.compensation"] = data.compensation;
+      if (data.address !== undefined) setFields["data.address"] = data.address;
+      if (data.leave !== undefined) setFields["data.leave"] = data.leave;
+      if (data.documents !== undefined)
+        setFields["data.documents"] = data.documents;
+
       const updatedEmployee = await EmployeeModel.findOneAndUpdate(
-        { _id: id, "meta.isDeleted": false },
-        { $set: { data: data } },
-        { new: true, runValidators: true },
+        { _id: id, companyId, "meta.isDeleted": false },
+        { $set: setFields },
+        { new: true, runValidators: false },
       );
       return updatedEmployee;
     } catch (error) {
@@ -63,12 +84,13 @@ export class EmployeeDAO {
   public async updateBankDetails(
     id: string,
     bank: Partial<BankDetails>,
+    companyId: string,
   ): Promise<Employee | null> {
     try {
       const updatedEmployee = await EmployeeModel.findOneAndUpdate(
-        { _id: id, "meta.isDeleted": false },
+        { _id: id, companyId, "meta.isDeleted": false },
         { $set: { "data.bank": bank } },
-        { new: true, runValidators: true },
+        { new: true, runValidators: false },
       );
       return updatedEmployee;
     } catch (error) {
@@ -79,12 +101,13 @@ export class EmployeeDAO {
   public async updateLegalDetails(
     id: string,
     data: Partial<LegalDetails>,
+    companyId: string,
   ): Promise<Employee | null> {
     try {
       const updatedEmployee = await EmployeeModel.findOneAndUpdate(
-        { _id: id, "meta.isDeleted": false },
+        { _id: id, companyId, "meta.isDeleted": false },
         { $set: { "data.legal": data } },
-        { new: true, runValidators: true },
+        { new: true, runValidators: false },
       );
       return updatedEmployee;
     } catch (error) {
@@ -95,12 +118,13 @@ export class EmployeeDAO {
   public async updateCompensation(
     id: string,
     compensation: Partial<Compensation>,
+    companyId: string,
   ): Promise<Employee | null> {
     try {
       const updatedEmployee = await EmployeeModel.findOneAndUpdate(
-        { _id: id, "meta.isDeleted": false },
+        { _id: id, companyId, "meta.isDeleted": false },
         { $set: { "data.compensation": compensation } },
-        { new: true, runValidators: true },
+        { new: true, runValidators: false },
       );
       return updatedEmployee;
     } catch (error) {
@@ -111,12 +135,13 @@ export class EmployeeDAO {
   public async updateAddress(
     id: string,
     address: Partial<Address>,
+    companyId: string,
   ): Promise<Employee | null> {
     try {
       const updatedEmployee = await EmployeeModel.findOneAndUpdate(
-        { _id: id, "meta.isDeleted": false },
+        { _id: id, companyId, "meta.isDeleted": false },
         { $set: { "data.address": address } },
-        { new: true, runValidators: true },
+        { new: true, runValidators: false },
       );
       return updatedEmployee;
     } catch (error) {
@@ -124,15 +149,16 @@ export class EmployeeDAO {
     }
   }
 
-  public async softDelete(id: string): Promise<void> {
+  public async softDelete(id: string, companyId: string): Promise<void> {
     try {
       const employee = await EmployeeModel.findOne({
         _id: id,
+        companyId,
         "meta.isDeleted": false,
       });
       if (!employee) throw new Error("Employee not found or already deleted");
       await EmployeeModel.findOneAndUpdate(
-        { _id: id },
+        { _id: id, companyId },
         { $set: { "meta.isDeleted": true } },
       );
     } catch (error) {
@@ -140,10 +166,14 @@ export class EmployeeDAO {
     }
   }
 
-  public async findByEmail(email: string): Promise<Employee | null> {
+  public async findByEmail(
+    email: string,
+    companyId: string,
+  ): Promise<Employee | null> {
     try {
       const employee = await EmployeeModel.findOne({
         "data.basic.email": email,
+        companyId,
         "meta.isDeleted": false,
       });
       return employee;
@@ -152,10 +182,14 @@ export class EmployeeDAO {
     }
   }
 
-  public async findByEmployeeId(employeeId: string): Promise<Employee | null> {
+  public async findByEmployeeId(
+    employeeId: string,
+    companyId: string,
+  ): Promise<Employee | null> {
     try {
       const employee = await EmployeeModel.findOne({
         "data.basic.employeeId": employeeId,
+        companyId,
         "meta.isDeleted": false,
       });
       return employee;

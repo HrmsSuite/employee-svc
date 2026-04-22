@@ -5,18 +5,25 @@ import {
 } from "@hrmssuite/persistence";
 
 export class DepartmentDAO {
-  public async createDepartmentDao(data: DepartmentData): Promise<Department> {
+  public async createDepartmentDao(
+    data: Department,
+    companyId: string,
+  ): Promise<Department> {
     try {
-      const createDepartment = await DepartmentModel.create({ data });
+      const createDepartment = await DepartmentModel.create({
+        ...data,
+        companyId,
+      });
       return createDepartment;
     } catch (error) {
       throw error;
     }
   }
 
-  public async findAllDepartment(): Promise<Department[]> {
+  public async findAllDepartment(companyId: string): Promise<Department[]> {
     try {
       const findDept = await DepartmentModel.find({
+        companyId,
         "meta.isDeleted": false,
       }).populate("data.designation");
       return findDept;
@@ -25,10 +32,14 @@ export class DepartmentDAO {
     }
   }
 
-  public async findById(id: string): Promise<Department | null> {
+  public async findById(
+    id: string,
+    companyId: string,
+  ): Promise<Department | null> {
     try {
       const data = await DepartmentModel.findOne({
         _id: id,
+        companyId,
         "meta.isDeleted": false,
       }).populate("data.designation");
       return data;
@@ -40,12 +51,19 @@ export class DepartmentDAO {
   public async updateDepartment(
     id: string,
     data: Partial<DepartmentData>,
+    companyId: string,
   ): Promise<Department | null> {
     try {
+      const setFields: Record<string, any> = {};
+      if (data.name !== undefined) setFields["data.name"] = data.name;
+      if (data.designation !== undefined)
+        setFields["data.designation"] = data.designation;
+      setFields["meta.updatedAt"] = new Date();
+
       const updateData = await DepartmentModel.findOneAndUpdate(
-        { _id: id, "meta.isDeleted": false },
-        { $set: { data: data } },
-        { new: true, runValidators: true },
+        { _id: id, companyId, "meta.isDeleted": false },
+        { $set: setFields },
+        { new: true, runValidators: false }, // ✅
       );
       return updateData;
     } catch (error) {
@@ -53,10 +71,14 @@ export class DepartmentDAO {
     }
   }
 
-  public async findByName(name: string): Promise<Department | null> {
+  public async findByName(
+    name: string,
+    companyId: string,
+  ): Promise<Department | null> {
     try {
       const findName = await DepartmentModel.findOne({
         "data.name": name,
+        companyId,
         "meta.isDeleted": false,
       });
       return findName;
@@ -65,16 +87,17 @@ export class DepartmentDAO {
     }
   }
 
-  public async softDelete(id: string): Promise<void> {
+  public async softDelete(id: string, companyId: string): Promise<void> {
     try {
       const department = await DepartmentModel.findOne({
         _id: id,
+        companyId,
         "meta.isDeleted": false,
       });
       if (!department)
         throw new Error("Department not found or already deleted");
       await DepartmentModel.findOneAndUpdate(
-        { _id: id },
+        { _id: id, companyId },
         { $set: { "meta.isDeleted": true } },
       );
     } catch (error) {
