@@ -64,7 +64,7 @@ export class DepartmentDAO {
         { _id: id, companyId, "meta.isDeleted": false },
         { $set: setFields },
         { new: true, runValidators: false }, // ✅
-      );
+      ).populate("data.designation");;
       return updateData;
     } catch (error) {
       throw error;

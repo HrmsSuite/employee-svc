@@ -126,7 +126,7 @@ export class DepartmentController {
         return;
       }
 
-      const updatedDepartment = await departmentServices.updateDepartment(id, req.body, companyId);
+      const updatedDepartment = await departmentServices.updateDepartment(id, req.body.data, companyId);
       if (!updatedDepartment) {
         res.status(404).json({ success: false, message: "Department not found" });
         return;

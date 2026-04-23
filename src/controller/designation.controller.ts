@@ -126,7 +126,7 @@ export class DesignationController {
         return;
       }
 
-      const updatedDesignation = await designationServices.updateDesignate(id, req.body, companyId);
+      const updatedDesignation = await designationServices.updateDesignate(id, req.body.data, companyId);
       if (!updatedDesignation) {
         res.status(404).json({ success: false, message: "Designation not found" });
         return;
