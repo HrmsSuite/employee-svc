@@ -9,7 +9,6 @@ const employeeController = new EmployeeController();
 router.post(
   "/",
   authenticate,
-  
   (req, res, next) => employeeController.createEmployee(req, res, next),
 );
 
@@ -17,7 +16,6 @@ router.post(
 router.get(
   "/",
   authenticate,
-  
   (req, res, next) => employeeController.findAll(req, res, next),
 );
 
@@ -25,7 +23,6 @@ router.get(
 router.get(
   "/email/:email",
   authenticate,
-  
   (req, res, next) => employeeController.findByEmail(req, res, next),
 );
 
@@ -33,15 +30,20 @@ router.get(
 router.get(
   "/employeeId/:employeeId",
   authenticate,
-  
   (req, res, next) => employeeController.findByEmployeeId(req, res, next),
+);
+
+// find by filters — before /:id to avoid conflict
+router.get(
+  "/filters",
+  authenticate,
+  (req, res, next) => employeeController.findByFilters(req, res, next),
 );
 
 // find by mongo id
 router.get(
   "/:id",
   authenticate,
-  
   (req, res, next) => employeeController.findById(req, res, next),
 );
 
@@ -49,7 +51,6 @@ router.get(
 router.patch(
   "/:id",
   authenticate,
-  
   (req, res, next) => employeeController.updateEmployee(req, res, next),
 );
 
@@ -57,7 +58,6 @@ router.patch(
 router.patch(
   "/:id/bank",
   authenticate,
-  
   (req, res, next) => employeeController.updateBankDetails(req, res, next),
 );
 
@@ -65,7 +65,6 @@ router.patch(
 router.patch(
   "/:id/legal",
   authenticate,
-  
   (req, res, next) => employeeController.updateLegalDetails(req, res, next),
 );
 
@@ -73,7 +72,6 @@ router.patch(
 router.patch(
   "/:id/compensation",
   authenticate,
-  
   (req, res, next) => employeeController.updateCompensation(req, res, next),
 );
 
@@ -81,7 +79,6 @@ router.patch(
 router.patch(
   "/:id/address",
   authenticate,
-  
   (req, res, next) => employeeController.updateAddress(req, res, next),
 );
 
@@ -89,7 +86,6 @@ router.patch(
 router.delete(
   "/:id",
   authenticate,
-  
   (req, res, next) => employeeController.softDelete(req, res, next),
 );
 

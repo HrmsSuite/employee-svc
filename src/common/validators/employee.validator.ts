@@ -84,7 +84,16 @@ export const EmployeeSchema = z.object({
 });
 
 // Update schemas — all fields optional
-export const UpdateEmployeeSchema = EmployeeSchema.partial();
+export const UpdateEmployeeSchema = z.object({
+  basic: EmployeeBasicSchema.partial().optional(),
+  job: JobDetailsSchema.partial().optional(),
+  compensation: CompensationSchema.partial().optional(),
+  address: AddressSchema.partial().optional(),
+  bank: BankDetailsSchema.partial().optional(),
+  legal: LegalDetailsSchema.partial().optional(),
+  leave: LeaveInfoSchema.partial().optional(),
+  documents: z.array(DocumentSchema).optional(),
+});
 
 export const UpdateBankSchema = BankDetailsSchema.partial();
 

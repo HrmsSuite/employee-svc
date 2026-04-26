@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { EmployeeServices } from "../service/employee.services";
 import { ZodError } from "zod";
-const employeeServices = new EmployeeServices();
+
 const handleZodError = (error: ZodError, res: Response): void => {
   res.status(400).json({
     success: false,
@@ -14,6 +14,12 @@ const handleZodError = (error: ZodError, res: Response): void => {
 };
 
 export class EmployeeController {
+  private employeeServices: EmployeeServices;
+
+  constructor() {
+    this.employeeServices = new EmployeeServices();
+  }
+
   public async createEmployee(
     req: Request,
     res: Response,
@@ -21,7 +27,7 @@ export class EmployeeController {
   ): Promise<void> {
     try {
       const companyId = req.companyId as string;
-      const createdEmployee = await employeeServices.createEmployee(
+      const createdEmployee = await this.employeeServices.createEmployee(
         req.body,
         companyId,
       );
@@ -46,11 +52,56 @@ export class EmployeeController {
   ): Promise<void> {
     try {
       const companyId = req.companyId as string;
-      const employees = await employeeServices.findAll(companyId);
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.max(
+        1,
+        Math.min(100, parseInt(req.query.limit as string) || 10),
+      );
+      console.log("✅ NEW findAll called — page:", page, "limit:", limit);
+      const result = await this.employeeServices.findAll(
+        companyId,
+        page,
+        limit,
+      );
       res.status(200).json({
         success: true,
         message: "Employees fetched successfully",
-        data: employees,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async findByFilters(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const companyId = req.companyId as string;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.max(
+        1,
+        Math.min(100, parseInt(req.query.limit as string) || 10),
+      );
+      const filters = {
+        designation: req.query.designation as string | undefined,
+        department: req.query.department as string | undefined,
+        employeeStatus: req.query.employeeStatus as string | undefined,
+        search: req.query.search as string | undefined,
+      };
+
+      const result = await this.employeeServices.findByFilters(
+        companyId,
+        filters,
+        page,
+        limit,
+      );
+      res.status(200).json({
+        success: true,
+        message: "Employees fetched successfully",
+        data: result,
       });
     } catch (error) {
       next(error);
@@ -70,7 +121,7 @@ export class EmployeeController {
         return;
       }
 
-      const employee = await employeeServices.findById(id, companyId);
+      const employee = await this.employeeServices.findById(id, companyId);
       if (!employee) {
         res.status(404).json({ success: false, message: "Employee not found" });
         return;
@@ -103,7 +154,10 @@ export class EmployeeController {
         return;
       }
 
-      const employee = await employeeServices.findByEmail(email, companyId);
+      const employee = await this.employeeServices.findByEmail(
+        email,
+        companyId,
+      );
       if (!employee) {
         res.status(404).json({ success: false, message: "Employee not found" });
         return;
@@ -138,7 +192,7 @@ export class EmployeeController {
         return;
       }
 
-      const employee = await employeeServices.findByEmployeeId(
+      const employee = await this.employeeServices.findByEmployeeId(
         employeeId,
         companyId,
       );
@@ -174,7 +228,7 @@ export class EmployeeController {
         return;
       }
 
-      const updatedEmployee = await employeeServices.updateEmployee(
+      const updatedEmployee = await this.employeeServices.updateEmployee(
         id,
         req.body,
         companyId,
@@ -211,7 +265,7 @@ export class EmployeeController {
         return;
       }
 
-      const updatedEmployee = await employeeServices.updateBankDetails(
+      const updatedEmployee = await this.employeeServices.updateBankDetails(
         id,
         req.body,
         companyId,
@@ -248,7 +302,7 @@ export class EmployeeController {
         return;
       }
 
-      const updatedEmployee = await employeeServices.updateLegalDetails(
+      const updatedEmployee = await this.employeeServices.updateLegalDetails(
         id,
         req.body,
         companyId,
@@ -285,7 +339,7 @@ export class EmployeeController {
         return;
       }
 
-      const updatedEmployee = await employeeServices.updateCompensation(
+      const updatedEmployee = await this.employeeServices.updateCompensation(
         id,
         req.body,
         companyId,
@@ -322,7 +376,7 @@ export class EmployeeController {
         return;
       }
 
-      const updatedEmployee = await employeeServices.updateAddress(
+      const updatedEmployee = await this.employeeServices.updateAddress(
         id,
         req.body,
         companyId,
@@ -359,7 +413,7 @@ export class EmployeeController {
         return;
       }
 
-      await employeeServices.softDelete(id, companyId);
+      await this.employeeServices.softDelete(id, companyId);
       res.status(200).json({
         success: true,
         message: "Employee deleted successfully",

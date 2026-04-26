@@ -18,10 +18,15 @@ import {
   UpdateCompensationSchema,
   UpdateAddressSchema,
 } from "../common/validators/employee.validator";
-
-const employeeDAO = new EmployeeDAO();
+import { EmployeeQueryFilters } from "../typings/employee.typings";
 
 export class EmployeeServices {
+  private employeeDAO: EmployeeDAO;
+
+  constructor() {
+    this.employeeDAO = new EmployeeDAO();
+  }
+
   public async createEmployee(
     data: EmployeeData,
     companyId: string,
@@ -29,7 +34,7 @@ export class EmployeeServices {
     EmployeeSchema.parse(data);
 
     try {
-      const createdEmployee = await employeeDAO.createEmployee(data, companyId);
+      const createdEmployee = await this.employeeDAO.createEmployee(data, companyId);
       return createdEmployee;
     } catch (error: unknown) {
       const message =
@@ -38,10 +43,30 @@ export class EmployeeServices {
     }
   }
 
-  public async findAll(companyId: string): Promise<Employee[]> {
+  public async findAll(
+    companyId: string,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{ employees: Employee[]; total: number; totalPages: number }> {
     try {
-      const employees = await employeeDAO.findAll(companyId);
-      return employees;
+      const result = await this.employeeDAO.findAll(companyId, page, limit);
+      return result;
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch employees";
+      throw new Error(message);
+    }
+  }
+
+  public async findByFilters(
+    companyId: string,
+    filters: EmployeeQueryFilters,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{ employees: Employee[]; total: number; totalPages: number }> {
+    try {
+      const result = await this.employeeDAO.findByFilters(companyId, filters, page, limit);
+      return result;
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Failed to fetch employees";
@@ -56,13 +81,11 @@ export class EmployeeServices {
     EmployeeIdSchema.parse(id);
 
     try {
-      const employee = await employeeDAO.findById(id, companyId);
+      const employee = await this.employeeDAO.findById(id, companyId);
       return employee;
     } catch (error: unknown) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch employee by id";
+        error instanceof Error ? error.message : "Failed to fetch employee by id";
       throw new Error(message);
     }
   }
@@ -74,13 +97,11 @@ export class EmployeeServices {
     EmployeeEmailSchema.parse(email);
 
     try {
-      const employee = await employeeDAO.findByEmail(email, companyId);
+      const employee = await this.employeeDAO.findByEmail(email, companyId);
       return employee;
     } catch (error: unknown) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch employee by email";
+        error instanceof Error ? error.message : "Failed to fetch employee by email";
       throw new Error(message);
     }
   }
@@ -92,16 +113,11 @@ export class EmployeeServices {
     EmployeeIdNumberSchema.parse(employeeId);
 
     try {
-      const employee = await employeeDAO.findByEmployeeId(
-        employeeId,
-        companyId,
-      );
+      const employee = await this.employeeDAO.findByEmployeeId(employeeId, companyId);
       return employee;
     } catch (error: unknown) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch employee by employee id";
+        error instanceof Error ? error.message : "Failed to fetch employee by employee id";
       throw new Error(message);
     }
   }
@@ -115,11 +131,7 @@ export class EmployeeServices {
     UpdateEmployeeSchema.parse(data);
 
     try {
-      const updatedEmployee = await employeeDAO.updateEmployee(
-        id,
-        data,
-        companyId,
-      );
+      const updatedEmployee = await this.employeeDAO.updateEmployee(id, data, companyId);
       return updatedEmployee;
     } catch (error: unknown) {
       const message =
@@ -137,17 +149,11 @@ export class EmployeeServices {
     UpdateBankSchema.parse(bank);
 
     try {
-      const updatedEmployee = await employeeDAO.updateBankDetails(
-        id,
-        bank,
-        companyId,
-      );
+      const updatedEmployee = await this.employeeDAO.updateBankDetails(id, bank, companyId);
       return updatedEmployee;
     } catch (error: unknown) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to update bank details";
+        error instanceof Error ? error.message : "Failed to update bank details";
       throw new Error(message);
     }
   }
@@ -161,17 +167,11 @@ export class EmployeeServices {
     UpdateLegalSchema.parse(data);
 
     try {
-      const updatedEmployee = await employeeDAO.updateLegalDetails(
-        id,
-        data,
-        companyId,
-      );
+      const updatedEmployee = await this.employeeDAO.updateLegalDetails(id, data, companyId);
       return updatedEmployee;
     } catch (error: unknown) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to update legal details";
+        error instanceof Error ? error.message : "Failed to update legal details";
       throw new Error(message);
     }
   }
@@ -185,17 +185,11 @@ export class EmployeeServices {
     UpdateCompensationSchema.parse(compensation);
 
     try {
-      const updatedEmployee = await employeeDAO.updateCompensation(
-        id,
-        compensation,
-        companyId,
-      );
+      const updatedEmployee = await this.employeeDAO.updateCompensation(id, compensation, companyId);
       return updatedEmployee;
     } catch (error: unknown) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to update compensation";
+        error instanceof Error ? error.message : "Failed to update compensation";
       throw new Error(message);
     }
   }
@@ -209,11 +203,7 @@ export class EmployeeServices {
     UpdateAddressSchema.parse(address);
 
     try {
-      const updatedEmployee = await employeeDAO.updateAddress(
-        id,
-        address,
-        companyId,
-      );
+      const updatedEmployee = await this.employeeDAO.updateAddress(id, address, companyId);
       return updatedEmployee;
     } catch (error: unknown) {
       const message =
@@ -226,7 +216,7 @@ export class EmployeeServices {
     EmployeeIdSchema.parse(id);
 
     try {
-      await employeeDAO.softDelete(id, companyId);
+      await this.employeeDAO.softDelete(id, companyId);
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Failed to delete employee";
