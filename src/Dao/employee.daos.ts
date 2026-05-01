@@ -1,11 +1,15 @@
 import {
   Address,
+  AttendancePolicy,
   BankDetails,
   Compensation,
   Employee,
   EmployeeData,
   EmployeeModel,
   LegalDetails,
+  PayrollInfo,
+  SalaryStructure,
+  TaxInfo,
 } from "@hrmssuite/persistence";
 import { EmployeeQueryFilters } from "../typings/employee.typings";
 
@@ -15,6 +19,7 @@ export class EmployeeDAO {
     companyId: string,
   ): Promise<Employee> {
     try {
+      console.log("DAO received data:", JSON.stringify(data, null, 2)); // ← add this
       const employee = await EmployeeModel.create({ data, companyId });
       return employee;
     } catch (error) {
@@ -118,8 +123,6 @@ export class EmployeeDAO {
   ): Promise<Employee | null> {
     try {
       const setFields: Record<string, any> = {};
-
-      // ✅ field-level update — existing data delete ஆகாது
       if (data.basic !== undefined) {
         Object.entries(data.basic).forEach(([key, value]) => {
           if (value !== undefined) {
@@ -138,7 +141,7 @@ export class EmployeeDAO {
 
       if (data.compensation !== undefined) {
         Object.entries(data.compensation).forEach(([key, value]) => {
-          if (value !== undefined) {
+          if (value !== undefined && key !== "salaryHistory") {
             setFields[`data.compensation.${key}`] = value;
           }
         });
@@ -162,6 +165,29 @@ export class EmployeeDAO {
 
       if (data.documents !== undefined) {
         setFields["data.documents"] = data.documents;
+      }
+      if (data.payroll !== undefined) {
+        Object.entries(data.payroll).forEach(([key, value]) => {
+          if (value !== undefined) {
+            setFields[`data.payroll.${key}`] = value;
+          }
+        });
+      }
+
+      if (data.attendancePolicy !== undefined) {
+        Object.entries(data.attendancePolicy).forEach(([key, value]) => {
+          if (value !== undefined) {
+            setFields[`data.attendancePolicy.${key}`] = value;
+          }
+        });
+      }
+
+      if (data.tax !== undefined) {
+        Object.entries(data.tax).forEach(([key, value]) => {
+          if (value !== undefined) {
+            setFields[`data.tax.${key}`] = value;
+          }
+        });
       }
 
       const updatedEmployee = await EmployeeModel.findOneAndUpdate(
@@ -222,23 +248,51 @@ export class EmployeeDAO {
       throw error;
     }
   }
-
   public async updateCompensation(
     id: string,
-    compensation: Partial<Compensation>,
+    compensation: Partial<Compensation> & {
+      newSalaryStructure?: SalaryStructure;
+    },
     companyId: string,
   ): Promise<Employee | null> {
     try {
       const setFields: Record<string, any> = {};
+      const pushFields: Record<string, any> = {};
+
       Object.entries(compensation).forEach(([key, value]) => {
-        if (value !== undefined) {
+        if (
+          value === undefined ||
+          key === "newSalaryStructure" ||
+          key === "salaryHistory"
+        )
+          return;
+
+        if (key === "salaryStructure") {
+          // update current active structure
+          setFields["data.compensation.salaryStructure"] = value;
+          // also sync top-level salary from gross for quick reads
+          if ((value as SalaryStructure).gross !== undefined) {
+            setFields["data.compensation.salary"] = (
+              value as SalaryStructure
+            ).gross;
+          }
+        } else {
           setFields[`data.compensation.${key}`] = value;
         }
       });
 
+      if (compensation.newSalaryStructure !== undefined) {
+        pushFields["data.compensation.salaryHistory"] =
+          compensation.newSalaryStructure;
+      }
+
+      const update: Record<string, any> = {};
+      if (Object.keys(setFields).length > 0) update["$set"] = setFields;
+      if (Object.keys(pushFields).length > 0) update["$push"] = pushFields;
+
       const updatedEmployee = await EmployeeModel.findOneAndUpdate(
         { _id: id, companyId, "meta.isDeleted": false },
-        { $set: setFields },
+        update,
         { new: true, runValidators: false },
       );
       return updatedEmployee;
@@ -257,6 +311,78 @@ export class EmployeeDAO {
       Object.entries(address).forEach(([key, value]) => {
         if (value !== undefined) {
           setFields[`data.address.${key}`] = value;
+        }
+      });
+
+      const updatedEmployee = await EmployeeModel.findOneAndUpdate(
+        { _id: id, companyId, "meta.isDeleted": false },
+        { $set: setFields },
+        { new: true, runValidators: false },
+      );
+      return updatedEmployee;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  public async updatePayrollInfo(
+    id: string,
+    payroll: Partial<PayrollInfo>,
+    companyId: string,
+  ): Promise<Employee | null> {
+    try {
+      const setFields: Record<string, any> = {};
+      Object.entries(payroll).forEach(([key, value]) => {
+        if (value !== undefined) {
+          setFields[`data.payroll.${key}`] = value;
+        }
+      });
+
+      const updatedEmployee = await EmployeeModel.findOneAndUpdate(
+        { _id: id, companyId, "meta.isDeleted": false },
+        { $set: setFields },
+        { new: true, runValidators: false },
+      );
+      return updatedEmployee;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  public async updateAttendancePolicy(
+    id: string,
+    policy: Partial<AttendancePolicy>,
+    companyId: string,
+  ): Promise<Employee | null> {
+    try {
+      const setFields: Record<string, any> = {};
+      Object.entries(policy).forEach(([key, value]) => {
+        if (value !== undefined) {
+          setFields[`data.attendancePolicy.${key}`] = value;
+        }
+      });
+
+      const updatedEmployee = await EmployeeModel.findOneAndUpdate(
+        { _id: id, companyId, "meta.isDeleted": false },
+        { $set: setFields },
+        { new: true, runValidators: false },
+      );
+      return updatedEmployee;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  public async updateTaxInfo(
+    id: string,
+    tax: Partial<TaxInfo>,
+    companyId: string,
+  ): Promise<Employee | null> {
+    try {
+      const setFields: Record<string, any> = {};
+      Object.entries(tax).forEach(([key, value]) => {
+        if (value !== undefined) {
+          setFields[`data.tax.${key}`] = value;
         }
       });
 

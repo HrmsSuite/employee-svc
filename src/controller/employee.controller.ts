@@ -57,7 +57,7 @@ export class EmployeeController {
         1,
         Math.min(100, parseInt(req.query.limit as string) || 10),
       );
-      console.log("✅ NEW findAll called — page:", page, "limit:", limit);
+      console.log("NEW findAll called — page:", page, "limit:", limit);
       const result = await this.employeeServices.findAll(
         companyId,
         page,

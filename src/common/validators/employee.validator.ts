@@ -1,19 +1,20 @@
 import { z } from "zod";
 
-// Basic
 const EmployeeBasicSchema = z.object({
   employeeId: z.string().min(1, "Employee ID is required"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   fullName: z.string().optional(),
   gender: z.enum(["Male", "Female", "Other"]).optional(),
-  dateOfBirth: z.coerce.date().optional(),
+  dateOfBirth: z.preprocess(
+    (val) => (val === "" || val === null ? undefined : val),
+    z.coerce.date().optional(),
+  ),
   email: z.string().email("Invalid email"),
   phone: z.string().min(1, "Phone is required"),
   profilePhotoUrl: z.string().optional(),
 });
 
-// Job
 const JobDetailsSchema = z.object({
   designation: z.string().min(1, "Designation is required"),
   department: z.string().min(1, "Department is required"),
@@ -22,15 +23,36 @@ const JobDetailsSchema = z.object({
   reportingManagerId: z.string().optional(),
   workLocation: z.string().min(1, "Work location is required"),
   employeeStatus: z.enum(["Active", "Inactive", "On Leave", "Terminated"]),
+
+  shiftId: z.preprocess(
+    (val) => (val === "" || val === null ? undefined : val),
+    z.string().optional(),
+  ),
+  weeklyOff: z.array(z.string()).optional(),
+  attendanceMode: z.enum(["Manual", "Biometric", "GPS", "Hybrid"]).optional(),
+
+  dateOfExit: z.preprocess(
+    (val) => (val === "" || val === null ? undefined : val),
+    z.coerce.date().optional(),
+  ),
+  exitReason: z.string().optional(),
+  fullAndFinalSettled: z.boolean().optional(),
 });
 
-// Compensation
+const SalaryStructureSchema = z.object({
+  basic: z.number().min(0),
+  hra: z.number().min(0),
+  allowances: z.number().min(0),
+  gross: z.number().min(0),
+  effectiveFrom: z.coerce.date(),
+});
+
 const CompensationSchema = z.object({
   salary: z.number().min(0, "Salary must be positive"),
   payFrequency: z.enum(["Monthly", "Bi-weekly"]),
+  salaryStructure: SalaryStructureSchema.optional(),
+  salaryHistory: z.array(SalaryStructureSchema).optional(),
 });
-
-// Bank
 const BankDetailsSchema = z.object({
   bankName: z.string().min(1, "Bank name is required"),
   accountNumber: z.string().min(1, "Account number is required"),
@@ -40,14 +62,12 @@ const BankDetailsSchema = z.object({
   updatedAt: z.coerce.date().optional(),
 });
 
-// Legal
 const LegalDetailsSchema = z.object({
   panNumber: z.string().optional(),
   aadhaarNumber: z.string().optional(),
   uan: z.string().optional(),
 });
 
-// Address
 const AddressSchema = z.object({
   currentAddress: z.string().min(1, "Current address is required"),
   permanentAddress: z.string().optional(),
@@ -57,21 +77,39 @@ const AddressSchema = z.object({
   postalCode: z.string().min(1, "Postal code is required"),
 });
 
-// Leave
 const LeaveInfoSchema = z.object({
   leaveBalance: z.number().min(0),
   sickLeaveBalance: z.number().min(0).optional(),
   casualLeaveBalance: z.number().min(0).optional(),
 });
 
-// Document
 const DocumentSchema = z.object({
+  type: z.string().min(1, "Document type is required"),
   name: z.string().min(1, "Document name is required"),
   url: z.string().min(1, "Document URL is required"),
-  uploadedAt: z.coerce.date(),
+  uploadedAt: z.coerce.date().optional(),
 });
 
-// Full Employee
+const PayrollInfoSchema = z.object({
+  payrollId: z.string().optional(),
+  payrollGroupId: z.preprocess(
+    (val) => (val === "" || val === null ? undefined : val),
+    z.string().optional(),
+  ),
+  payslipPreference: z.enum(["Email", "Download", "Both"]).optional(),
+});
+
+const AttendancePolicySchema = z.object({
+  workingHoursPerDay: z.number().min(0).max(24).optional(),
+  halfDayThreshold: z.number().min(0).optional(),
+  overtimeEligible: z.boolean().optional(),
+});
+
+const TaxInfoSchema = z.object({
+  taxRegime: z.enum(["Old", "New"]).optional(),
+  taxDeclarationSubmitted: z.boolean().optional(),
+});
+
 export const EmployeeSchema = z.object({
   basic: EmployeeBasicSchema,
   job: JobDetailsSchema,
@@ -81,9 +119,12 @@ export const EmployeeSchema = z.object({
   legal: LegalDetailsSchema.optional(),
   leave: LeaveInfoSchema.optional(),
   documents: z.array(DocumentSchema).optional(),
+
+  payroll: PayrollInfoSchema.optional(),
+  attendancePolicy: AttendancePolicySchema.optional(),
+  tax: TaxInfoSchema.optional(),
 });
 
-// Update schemas — all fields optional
 export const UpdateEmployeeSchema = z.object({
   basic: EmployeeBasicSchema.partial().optional(),
   job: JobDetailsSchema.partial().optional(),
@@ -93,26 +134,39 @@ export const UpdateEmployeeSchema = z.object({
   legal: LegalDetailsSchema.partial().optional(),
   leave: LeaveInfoSchema.partial().optional(),
   documents: z.array(DocumentSchema).optional(),
+
+  payroll: PayrollInfoSchema.partial().optional(),
+  attendancePolicy: AttendancePolicySchema.partial().optional(),
+  tax: TaxInfoSchema.partial().optional(),
 });
 
 export const UpdateBankSchema = BankDetailsSchema.partial();
-
 export const UpdateLegalSchema = LegalDetailsSchema.partial();
-
 export const UpdateCompensationSchema = CompensationSchema.partial();
-
 export const UpdateAddressSchema = AddressSchema.partial();
 
+export const UpdatePayrollInfoSchema = PayrollInfoSchema.partial();
+export const UpdateAttendancePolicySchema = AttendancePolicySchema.partial();
+export const UpdateTaxInfoSchema = TaxInfoSchema.partial();
+
 export const EmployeeIdSchema = z.string().min(1, "ID is required");
-
 export const EmployeeEmailSchema = z.string().email("Invalid email");
+export const EmployeeIdNumberSchema = z
+  .string()
+  .min(1, "Employee ID is required");
 
-export const EmployeeIdNumberSchema = z.string().min(1, "Employee ID is required");
-
-// Types
 export type EmployeeSchemaType = z.infer<typeof EmployeeSchema>;
 export type UpdateEmployeeSchemaType = z.infer<typeof UpdateEmployeeSchema>;
 export type UpdateBankSchemaType = z.infer<typeof UpdateBankSchema>;
 export type UpdateLegalSchemaType = z.infer<typeof UpdateLegalSchema>;
-export type UpdateCompensationSchemaType = z.infer<typeof UpdateCompensationSchema>;
+export type UpdateCompensationSchemaType = z.infer<
+  typeof UpdateCompensationSchema
+>;
 export type UpdateAddressSchemaType = z.infer<typeof UpdateAddressSchema>;
+export type UpdatePayrollInfoSchemaType = z.infer<
+  typeof UpdatePayrollInfoSchema
+>;
+export type UpdateAttendancePolicySchemaType = z.infer<
+  typeof UpdateAttendancePolicySchema
+>;
+export type UpdateTaxInfoSchemaType = z.infer<typeof UpdateTaxInfoSchema>;
