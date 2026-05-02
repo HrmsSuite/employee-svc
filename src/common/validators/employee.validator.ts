@@ -24,10 +24,7 @@ const JobDetailsSchema = z.object({
   workLocation: z.string().min(1, "Work location is required"),
   employeeStatus: z.enum(["Active", "Inactive", "On Leave", "Terminated"]),
 
-  shiftId: z.preprocess(
-    (val) => (val === "" || val === null ? undefined : val),
-    z.string().optional(),
-  ),
+  shiftId: z.string().optional(),
   weeklyOff: z.array(z.string()).optional(),
   attendanceMode: z.enum(["Manual", "Biometric", "GPS", "Hybrid"]).optional(),
 

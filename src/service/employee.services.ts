@@ -1,11 +1,4 @@
-import {
-  Address,
-  BankDetails,
-  Compensation,
-  Employee,
-  EmployeeData,
-  LegalDetails,
-} from "@hrmssuite/persistence";
+import { Employee, EmployeeData } from "@hrmssuite/persistence";
 import { EmployeeDAO } from "../Dao/employee.daos";
 import {
   EmployeeSchema,
@@ -13,10 +6,6 @@ import {
   EmployeeEmailSchema,
   EmployeeIdNumberSchema,
   UpdateEmployeeSchema,
-  UpdateBankSchema,
-  UpdateLegalSchema,
-  UpdateCompensationSchema,
-  UpdateAddressSchema,
 } from "../common/validators/employee.validator";
 import { EmployeeQueryFilters } from "../typings/employee.typings";
 
@@ -34,7 +23,10 @@ export class EmployeeServices {
     EmployeeSchema.parse(data);
 
     try {
-      const createdEmployee = await this.employeeDAO.createEmployee(data, companyId);
+      const createdEmployee = await this.employeeDAO.createEmployee(
+        data,
+        companyId,
+      );
       return createdEmployee;
     } catch (error: unknown) {
       const message =
@@ -65,7 +57,12 @@ export class EmployeeServices {
     limit: number = 10,
   ): Promise<{ employees: Employee[]; total: number; totalPages: number }> {
     try {
-      const result = await this.employeeDAO.findByFilters(companyId, filters, page, limit);
+      const result = await this.employeeDAO.findByFilters(
+        companyId,
+        filters,
+        page,
+        limit,
+      );
       return result;
     } catch (error: unknown) {
       const message =
@@ -85,7 +82,9 @@ export class EmployeeServices {
       return employee;
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Failed to fetch employee by id";
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch employee by id";
       throw new Error(message);
     }
   }
@@ -101,7 +100,9 @@ export class EmployeeServices {
       return employee;
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Failed to fetch employee by email";
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch employee by email";
       throw new Error(message);
     }
   }
@@ -113,11 +114,16 @@ export class EmployeeServices {
     EmployeeIdNumberSchema.parse(employeeId);
 
     try {
-      const employee = await this.employeeDAO.findByEmployeeId(employeeId, companyId);
+      const employee = await this.employeeDAO.findByEmployeeId(
+        employeeId,
+        companyId,
+      );
       return employee;
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Failed to fetch employee by employee id";
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch employee by employee id";
       throw new Error(message);
     }
   }
@@ -126,12 +132,18 @@ export class EmployeeServices {
     id: string,
     data: Partial<EmployeeData>,
     companyId: string,
+    changedBy?: string,
   ): Promise<Employee | null> {
     EmployeeIdSchema.parse(id);
     UpdateEmployeeSchema.parse(data);
 
     try {
-      const updatedEmployee = await this.employeeDAO.updateEmployee(id, data, companyId);
+      const updatedEmployee = await this.employeeDAO.updateEmployee(
+        id,
+        data,
+        companyId,
+        changedBy,
+      );
       return updatedEmployee;
     } catch (error: unknown) {
       const message =
@@ -140,83 +152,15 @@ export class EmployeeServices {
     }
   }
 
-  public async updateBankDetails(
+  public async softDelete(
     id: string,
-    bank: Partial<BankDetails>,
     companyId: string,
-  ): Promise<Employee | null> {
-    EmployeeIdSchema.parse(id);
-    UpdateBankSchema.parse(bank);
-
-    try {
-      const updatedEmployee = await this.employeeDAO.updateBankDetails(id, bank, companyId);
-      return updatedEmployee;
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to update bank details";
-      throw new Error(message);
-    }
-  }
-
-  public async updateLegalDetails(
-    id: string,
-    data: Partial<LegalDetails>,
-    companyId: string,
-  ): Promise<Employee | null> {
-    EmployeeIdSchema.parse(id);
-    UpdateLegalSchema.parse(data);
-
-    try {
-      const updatedEmployee = await this.employeeDAO.updateLegalDetails(id, data, companyId);
-      return updatedEmployee;
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to update legal details";
-      throw new Error(message);
-    }
-  }
-
-  public async updateCompensation(
-    id: string,
-    compensation: Partial<Compensation>,
-    companyId: string,
-  ): Promise<Employee | null> {
-    EmployeeIdSchema.parse(id);
-    UpdateCompensationSchema.parse(compensation);
-
-    try {
-      const updatedEmployee = await this.employeeDAO.updateCompensation(id, compensation, companyId);
-      return updatedEmployee;
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to update compensation";
-      throw new Error(message);
-    }
-  }
-
-  public async updateAddress(
-    id: string,
-    address: Partial<Address>,
-    companyId: string,
-  ): Promise<Employee | null> {
-    EmployeeIdSchema.parse(id);
-    UpdateAddressSchema.parse(address);
-
-    try {
-      const updatedEmployee = await this.employeeDAO.updateAddress(id, address, companyId);
-      return updatedEmployee;
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to update address";
-      throw new Error(message);
-    }
-  }
-
-  public async softDelete(id: string, companyId: string): Promise<void> {
+    changedBy?: string,
+  ): Promise<void> {
     EmployeeIdSchema.parse(id);
 
     try {
-      await this.employeeDAO.softDelete(id, companyId);
+      await this.employeeDAO.softDelete(id, companyId, changedBy);
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Failed to delete employee";

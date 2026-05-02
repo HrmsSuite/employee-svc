@@ -6,3 +6,4 @@ export interface EmployeeQueryFilters {
   workLocation?: string;
   search?: string;
 }
+

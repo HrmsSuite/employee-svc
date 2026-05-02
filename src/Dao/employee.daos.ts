@@ -1,17 +1,11 @@
 import {
-  Address,
-  AttendancePolicy,
-  BankDetails,
-  Compensation,
+  AuditEntry,
   Employee,
   EmployeeData,
   EmployeeModel,
-  LegalDetails,
-  PayrollInfo,
-  SalaryStructure,
-  TaxInfo,
 } from "@hrmssuite/persistence";
 import { EmployeeQueryFilters } from "../typings/employee.typings";
+import { Types } from "mongoose";
 
 export class EmployeeDAO {
   public async createEmployee(
@@ -20,7 +14,21 @@ export class EmployeeDAO {
   ): Promise<Employee> {
     try {
       console.log("DAO received data:", JSON.stringify(data, null, 2)); // ← add this
-      const employee = await EmployeeModel.create({ data, companyId });
+      const employee = await EmployeeModel.create({
+        data,
+        companyId,
+
+        meta: {
+          version: 1,
+          isDeleted: false,
+          auditTrail: [
+            {
+              action: "created",
+              changedAt: new Date(),
+            },
+          ],
+        },
+      });
       return employee;
     } catch (error) {
       throw error;
@@ -39,6 +47,7 @@ export class EmployeeDAO {
       })
         .populate("data.job.designation")
         .populate("data.job.department")
+        .populate("data.job.shiftId")
         .populate("data.job.reportingManagerId");
       return employee;
     } catch (error) {
@@ -76,6 +85,7 @@ export class EmployeeDAO {
         EmployeeModel.find(query)
           .populate("data.job.designation")
           .populate("data.job.department")
+          .populate("data.job.shiftId")
           .populate("data.job.reportingManagerId")
           .skip(skip)
           .limit(limit),
@@ -100,6 +110,7 @@ export class EmployeeDAO {
         EmployeeModel.find({ companyId, "meta.isDeleted": false })
           .populate("data.job.designation")
           .populate("data.job.department")
+          .populate("data.job.shiftId")
           .populate("data.job.reportingManagerId")
           .skip(skip)
           .limit(limit),
@@ -120,6 +131,7 @@ export class EmployeeDAO {
     id: string,
     data: Partial<EmployeeData>,
     companyId: string,
+    changedBy?: string,
   ): Promise<Employee | null> {
     try {
       const setFields: Record<string, any> = {};
@@ -174,6 +186,23 @@ export class EmployeeDAO {
         });
       }
 
+      // employee.daos.ts - updateEmployee function-ல இதை சேர்க்கவும்
+      if (data.bank !== undefined) {
+        Object.entries(data.bank).forEach(([key, value]) => {
+          if (value !== undefined) {
+            setFields[`data.bank.${key}`] = value;
+          }
+        });
+      }
+
+      if (data.legal !== undefined) {
+        Object.entries(data.legal).forEach(([key, value]) => {
+          if (value !== undefined) {
+            setFields[`data.legal.${key}`] = value;
+          }
+        });
+      }
+
       if (data.attendancePolicy !== undefined) {
         Object.entries(data.attendancePolicy).forEach(([key, value]) => {
           if (value !== undefined) {
@@ -190,9 +219,15 @@ export class EmployeeDAO {
         });
       }
 
+      const auditEntry: AuditEntry = {
+        action: "updated",
+        changedBy: changedBy ? new Types.ObjectId(changedBy) : undefined,
+        changedAt: new Date(),
+      };
+
       const updatedEmployee = await EmployeeModel.findOneAndUpdate(
         { _id: id, companyId, "meta.isDeleted": false },
-        { $set: setFields },
+        { $set: setFields, $push: { "meta.auditTrail": auditEntry } },
         { new: true, runValidators: false },
       );
       return updatedEmployee;
@@ -201,203 +236,11 @@ export class EmployeeDAO {
     }
   }
 
-  public async updateBankDetails(
+  public async softDelete(
     id: string,
-    bank: Partial<BankDetails>,
     companyId: string,
-  ): Promise<Employee | null> {
-    try {
-      const setFields: Record<string, any> = {};
-      Object.entries(bank).forEach(([key, value]) => {
-        if (value !== undefined) {
-          setFields[`data.bank.${key}`] = value;
-        }
-      });
-
-      const updatedEmployee = await EmployeeModel.findOneAndUpdate(
-        { _id: id, companyId, "meta.isDeleted": false },
-        { $set: setFields },
-        { new: true, runValidators: false },
-      );
-      return updatedEmployee;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  public async updateLegalDetails(
-    id: string,
-    data: Partial<LegalDetails>,
-    companyId: string,
-  ): Promise<Employee | null> {
-    try {
-      const setFields: Record<string, any> = {};
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined) {
-          setFields[`data.legal.${key}`] = value;
-        }
-      });
-
-      const updatedEmployee = await EmployeeModel.findOneAndUpdate(
-        { _id: id, companyId, "meta.isDeleted": false },
-        { $set: setFields },
-        { new: true, runValidators: false },
-      );
-      return updatedEmployee;
-    } catch (error) {
-      throw error;
-    }
-  }
-  public async updateCompensation(
-    id: string,
-    compensation: Partial<Compensation> & {
-      newSalaryStructure?: SalaryStructure;
-    },
-    companyId: string,
-  ): Promise<Employee | null> {
-    try {
-      const setFields: Record<string, any> = {};
-      const pushFields: Record<string, any> = {};
-
-      Object.entries(compensation).forEach(([key, value]) => {
-        if (
-          value === undefined ||
-          key === "newSalaryStructure" ||
-          key === "salaryHistory"
-        )
-          return;
-
-        if (key === "salaryStructure") {
-          // update current active structure
-          setFields["data.compensation.salaryStructure"] = value;
-          // also sync top-level salary from gross for quick reads
-          if ((value as SalaryStructure).gross !== undefined) {
-            setFields["data.compensation.salary"] = (
-              value as SalaryStructure
-            ).gross;
-          }
-        } else {
-          setFields[`data.compensation.${key}`] = value;
-        }
-      });
-
-      if (compensation.newSalaryStructure !== undefined) {
-        pushFields["data.compensation.salaryHistory"] =
-          compensation.newSalaryStructure;
-      }
-
-      const update: Record<string, any> = {};
-      if (Object.keys(setFields).length > 0) update["$set"] = setFields;
-      if (Object.keys(pushFields).length > 0) update["$push"] = pushFields;
-
-      const updatedEmployee = await EmployeeModel.findOneAndUpdate(
-        { _id: id, companyId, "meta.isDeleted": false },
-        update,
-        { new: true, runValidators: false },
-      );
-      return updatedEmployee;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  public async updateAddress(
-    id: string,
-    address: Partial<Address>,
-    companyId: string,
-  ): Promise<Employee | null> {
-    try {
-      const setFields: Record<string, any> = {};
-      Object.entries(address).forEach(([key, value]) => {
-        if (value !== undefined) {
-          setFields[`data.address.${key}`] = value;
-        }
-      });
-
-      const updatedEmployee = await EmployeeModel.findOneAndUpdate(
-        { _id: id, companyId, "meta.isDeleted": false },
-        { $set: setFields },
-        { new: true, runValidators: false },
-      );
-      return updatedEmployee;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  public async updatePayrollInfo(
-    id: string,
-    payroll: Partial<PayrollInfo>,
-    companyId: string,
-  ): Promise<Employee | null> {
-    try {
-      const setFields: Record<string, any> = {};
-      Object.entries(payroll).forEach(([key, value]) => {
-        if (value !== undefined) {
-          setFields[`data.payroll.${key}`] = value;
-        }
-      });
-
-      const updatedEmployee = await EmployeeModel.findOneAndUpdate(
-        { _id: id, companyId, "meta.isDeleted": false },
-        { $set: setFields },
-        { new: true, runValidators: false },
-      );
-      return updatedEmployee;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  public async updateAttendancePolicy(
-    id: string,
-    policy: Partial<AttendancePolicy>,
-    companyId: string,
-  ): Promise<Employee | null> {
-    try {
-      const setFields: Record<string, any> = {};
-      Object.entries(policy).forEach(([key, value]) => {
-        if (value !== undefined) {
-          setFields[`data.attendancePolicy.${key}`] = value;
-        }
-      });
-
-      const updatedEmployee = await EmployeeModel.findOneAndUpdate(
-        { _id: id, companyId, "meta.isDeleted": false },
-        { $set: setFields },
-        { new: true, runValidators: false },
-      );
-      return updatedEmployee;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  public async updateTaxInfo(
-    id: string,
-    tax: Partial<TaxInfo>,
-    companyId: string,
-  ): Promise<Employee | null> {
-    try {
-      const setFields: Record<string, any> = {};
-      Object.entries(tax).forEach(([key, value]) => {
-        if (value !== undefined) {
-          setFields[`data.tax.${key}`] = value;
-        }
-      });
-
-      const updatedEmployee = await EmployeeModel.findOneAndUpdate(
-        { _id: id, companyId, "meta.isDeleted": false },
-        { $set: setFields },
-        { new: true, runValidators: false },
-      );
-      return updatedEmployee;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  public async softDelete(id: string, companyId: string): Promise<void> {
+    changedBy?: string,
+  ): Promise<void> {
     try {
       const employee = await EmployeeModel.findOne({
         _id: id,
@@ -407,7 +250,16 @@ export class EmployeeDAO {
       if (!employee) throw new Error("Employee not found or already deleted");
       await EmployeeModel.findOneAndUpdate(
         { _id: id, companyId },
-        { $set: { "meta.isDeleted": true } },
+        {
+          $set: { "meta.isDeleted": true },
+          $push: {
+            "meta.auditTrail": {
+              action: "deleted",
+              changedBy: changedBy ? new Types.ObjectId(changedBy) : undefined,
+              changedAt: new Date(),
+            },
+          },
+        },
       );
     } catch (error) {
       throw error;

@@ -232,6 +232,7 @@ export class EmployeeController {
         id,
         req.body,
         companyId,
+        req.user?.id,
       );
       if (!updatedEmployee) {
         res.status(404).json({ success: false, message: "Employee not found" });
@@ -241,154 +242,6 @@ export class EmployeeController {
       res.status(200).json({
         success: true,
         message: "Employee updated successfully",
-        data: updatedEmployee,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        handleZodError(error, res);
-        return;
-      }
-      next(error);
-    }
-  }
-
-  public async updateBankDetails(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> {
-    try {
-      const id = req.params.id as string;
-      const companyId = req.companyId as string;
-      if (!id) {
-        res.status(400).json({ success: false, message: "ID is required" });
-        return;
-      }
-
-      const updatedEmployee = await this.employeeServices.updateBankDetails(
-        id,
-        req.body,
-        companyId,
-      );
-      if (!updatedEmployee) {
-        res.status(404).json({ success: false, message: "Employee not found" });
-        return;
-      }
-
-      res.status(200).json({
-        success: true,
-        message: "Bank details updated successfully",
-        data: updatedEmployee,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        handleZodError(error, res);
-        return;
-      }
-      next(error);
-    }
-  }
-
-  public async updateLegalDetails(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> {
-    try {
-      const id = req.params.id as string;
-      const companyId = req.companyId as string;
-      if (!id) {
-        res.status(400).json({ success: false, message: "ID is required" });
-        return;
-      }
-
-      const updatedEmployee = await this.employeeServices.updateLegalDetails(
-        id,
-        req.body,
-        companyId,
-      );
-      if (!updatedEmployee) {
-        res.status(404).json({ success: false, message: "Employee not found" });
-        return;
-      }
-
-      res.status(200).json({
-        success: true,
-        message: "Legal details updated successfully",
-        data: updatedEmployee,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        handleZodError(error, res);
-        return;
-      }
-      next(error);
-    }
-  }
-
-  public async updateCompensation(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> {
-    try {
-      const id = req.params.id as string;
-      const companyId = req.companyId as string;
-      if (!id) {
-        res.status(400).json({ success: false, message: "ID is required" });
-        return;
-      }
-
-      const updatedEmployee = await this.employeeServices.updateCompensation(
-        id,
-        req.body,
-        companyId,
-      );
-      if (!updatedEmployee) {
-        res.status(404).json({ success: false, message: "Employee not found" });
-        return;
-      }
-
-      res.status(200).json({
-        success: true,
-        message: "Compensation updated successfully",
-        data: updatedEmployee,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        handleZodError(error, res);
-        return;
-      }
-      next(error);
-    }
-  }
-
-  public async updateAddress(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> {
-    try {
-      const id = req.params.id as string;
-      const companyId = req.companyId as string;
-      if (!id) {
-        res.status(400).json({ success: false, message: "ID is required" });
-        return;
-      }
-
-      const updatedEmployee = await this.employeeServices.updateAddress(
-        id,
-        req.body,
-        companyId,
-      );
-      if (!updatedEmployee) {
-        res.status(404).json({ success: false, message: "Employee not found" });
-        return;
-      }
-
-      res.status(200).json({
-        success: true,
-        message: "Address updated successfully",
         data: updatedEmployee,
       });
     } catch (error) {
@@ -413,7 +266,7 @@ export class EmployeeController {
         return;
       }
 
-      await this.employeeServices.softDelete(id, companyId);
+      await this.employeeServices.softDelete(id, companyId,req.user?.id);
       res.status(200).json({
         success: true,
         message: "Employee deleted successfully",

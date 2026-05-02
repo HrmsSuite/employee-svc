@@ -3,6 +3,9 @@ import { EmployeeController } from "../controller/employee.controller";
 import { authenticate } from "@hrmssuite/persistence";
 import { uploadToS3 } from "../helpers/s3-upload";
 import multer from "multer";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { s3 } from "../common/config/S3-upload";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const router = Router();
 const employeeController = new EmployeeController();
@@ -23,17 +26,41 @@ router.post(
         res.status(400).json({ success: false, message: "No file provided" });
         return;
       }
-      const url = await uploadToS3(req.file, "employee-documents");
+      const key  = await uploadToS3(req.file, "employee-documents");
       res.status(200).json({
         success: true,
         message: "File uploaded successfully",
-        data: { url },
+        data: { key  },
       });
     } catch (error) {
       next(error);
     }
   },
 );
+router.get("/media/:folder/:filename", authenticate, async (req, res) => {
+  try {
+    const { folder, filename } = req.params;
+
+    if (!folder || !filename) {
+      return res.status(400).json({ message: "Invalid key" });
+    }
+
+    const key = `${folder}/${filename}`; 
+
+    const command = new GetObjectCommand({
+      Bucket: process.env.AWS_BUCKET_NAME!,
+      Key: key,
+    });
+
+    const url = await getSignedUrl(s3, command, {
+      expiresIn: 300,
+    });
+
+    return res.json({ url });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to generate URL" });
+  }
+});
 // create
 router.post("/", authenticate, (req, res, next) =>
   employeeController.createEmployee(req, res, next),
@@ -67,26 +94,6 @@ router.get("/:id", authenticate, (req, res, next) =>
 // update employee
 router.patch("/:id", authenticate, (req, res, next) =>
   employeeController.updateEmployee(req, res, next),
-);
-
-// update bank details
-router.patch("/:id/bank", authenticate, (req, res, next) =>
-  employeeController.updateBankDetails(req, res, next),
-);
-
-// update legal details
-router.patch("/:id/legal", authenticate, (req, res, next) =>
-  employeeController.updateLegalDetails(req, res, next),
-);
-
-// update compensation
-router.patch("/:id/compensation", authenticate, (req, res, next) =>
-  employeeController.updateCompensation(req, res, next),
-);
-
-// update address
-router.patch("/:id/address", authenticate, (req, res, next) =>
-  employeeController.updateAddress(req, res, next),
 );
 
 // soft delete
