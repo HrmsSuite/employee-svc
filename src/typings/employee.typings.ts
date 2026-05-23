@@ -1,9 +1,16 @@
+import { Employee } from "@hrmssuite/persistence";
+
 export interface EmployeeQueryFilters {
-  designation?: string;
-  department?: string;
-  employeeStatus?: string;
-  employmentType?: string;
-  workLocation?: string;
   search?: string;
+  department?: string;
+  designation?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
 }
 
+export interface PaginatedEmployees {
+  employees: Employee[];
+  total: number;
+  pages: number;
+}

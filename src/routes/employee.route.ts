@@ -26,11 +26,11 @@ router.post(
         res.status(400).json({ success: false, message: "No file provided" });
         return;
       }
-      const key  = await uploadToS3(req.file, "employee-documents");
+      const key = await uploadToS3(req.file, "employee-documents");
       res.status(200).json({
         success: true,
         message: "File uploaded successfully",
-        data: { key  },
+        data: { key },
       });
     } catch (error) {
       next(error);
@@ -45,7 +45,7 @@ router.get("/media/:folder/:filename", authenticate, async (req, res) => {
       return res.status(400).json({ message: "Invalid key" });
     }
 
-    const key = `${folder}/${filename}`; 
+    const key = `${folder}/${filename}`;
 
     const command = new GetObjectCommand({
       Bucket: process.env.AWS_BUCKET_NAME!,
@@ -79,11 +79,6 @@ router.get("/email/:email", authenticate, (req, res, next) =>
 // find by employeeId — before /:id to avoid conflict
 router.get("/employeeId/:employeeId", authenticate, (req, res, next) =>
   employeeController.findByEmployeeId(req, res, next),
-);
-
-// find by filters — before /:id to avoid conflict
-router.get("/filters", authenticate, (req, res, next) =>
-  employeeController.findByFilters(req, res, next),
 );
 
 // find by mongo id

@@ -6,7 +6,9 @@ export async function mongoDB() {
     if (!process.env.DATABASE_URL) {
       throw new Error("DATABASE_URL is required");
     }
-    await connectDB(process.env.DATABASE_URL);
+    const url = new URL(process.env.DATABASE_URL);
+    url.searchParams.set("retryWrites", "false");
+    await connectDB(url.toString());
     console.log("DB is Connected");
   } catch (err) {
     console.error(err);

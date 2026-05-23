@@ -23,8 +23,8 @@ const JobDetailsSchema = z.object({
   reportingManagerId: z.string().optional(),
   workLocation: z.string().min(1, "Work location is required"),
   employeeStatus: z.enum(["Active", "Inactive", "On Leave", "Terminated"]),
-
   shiftId: z.string().optional(),
+  leavepolicy: z.array(z.string()).min(1, "At least one leave policy required"),
   weeklyOff: z.array(z.string()).optional(),
   attendanceMode: z.enum(["Manual", "Biometric", "GPS", "Hybrid"]).optional(),
 
@@ -74,12 +74,6 @@ const AddressSchema = z.object({
   postalCode: z.string().min(1, "Postal code is required"),
 });
 
-const LeaveInfoSchema = z.object({
-  leaveBalance: z.number().min(0),
-  sickLeaveBalance: z.number().min(0).optional(),
-  casualLeaveBalance: z.number().min(0).optional(),
-});
-
 const DocumentSchema = z.object({
   type: z.string().min(1, "Document type is required"),
   name: z.string().min(1, "Document name is required"),
@@ -96,12 +90,6 @@ const PayrollInfoSchema = z.object({
   payslipPreference: z.enum(["Email", "Download", "Both"]).optional(),
 });
 
-const AttendancePolicySchema = z.object({
-  workingHoursPerDay: z.number().min(0).max(24).optional(),
-  halfDayThreshold: z.number().min(0).optional(),
-  overtimeEligible: z.boolean().optional(),
-});
-
 const TaxInfoSchema = z.object({
   taxRegime: z.enum(["Old", "New"]).optional(),
   taxDeclarationSubmitted: z.boolean().optional(),
@@ -114,11 +102,8 @@ export const EmployeeSchema = z.object({
   address: AddressSchema,
   bank: BankDetailsSchema.optional(),
   legal: LegalDetailsSchema.optional(),
-  leave: LeaveInfoSchema.optional(),
   documents: z.array(DocumentSchema).optional(),
-
   payroll: PayrollInfoSchema.optional(),
-  attendancePolicy: AttendancePolicySchema.optional(),
   tax: TaxInfoSchema.optional(),
 });
 
@@ -129,11 +114,8 @@ export const UpdateEmployeeSchema = z.object({
   address: AddressSchema.partial().optional(),
   bank: BankDetailsSchema.partial().optional(),
   legal: LegalDetailsSchema.partial().optional(),
-  leave: LeaveInfoSchema.partial().optional(),
   documents: z.array(DocumentSchema).optional(),
-
   payroll: PayrollInfoSchema.partial().optional(),
-  attendancePolicy: AttendancePolicySchema.partial().optional(),
   tax: TaxInfoSchema.partial().optional(),
 });
 
@@ -143,7 +125,6 @@ export const UpdateCompensationSchema = CompensationSchema.partial();
 export const UpdateAddressSchema = AddressSchema.partial();
 
 export const UpdatePayrollInfoSchema = PayrollInfoSchema.partial();
-export const UpdateAttendancePolicySchema = AttendancePolicySchema.partial();
 export const UpdateTaxInfoSchema = TaxInfoSchema.partial();
 
 export const EmployeeIdSchema = z.string().min(1, "ID is required");
@@ -162,8 +143,5 @@ export type UpdateCompensationSchemaType = z.infer<
 export type UpdateAddressSchemaType = z.infer<typeof UpdateAddressSchema>;
 export type UpdatePayrollInfoSchemaType = z.infer<
   typeof UpdatePayrollInfoSchema
->;
-export type UpdateAttendancePolicySchemaType = z.infer<
-  typeof UpdateAttendancePolicySchema
 >;
 export type UpdateTaxInfoSchemaType = z.infer<typeof UpdateTaxInfoSchema>;
