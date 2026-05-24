@@ -18,12 +18,50 @@ const LIST_PROJECT = {
   "data.basic.firstName": 1,
   "data.basic.lastName": 1,
   "data.basic.email": 1,
+  "data.basic.gender": 1,
+  "data.basic.employeeId": 1,
+  "data.basic.dateOfBirth": 1,
+  "data.job.employeeStatus": 1,
   "data.basic.profilePhoto": 1,
   "data.basic.phone": 1,
   "data.job.department": 1,
+  "data.job.employmentType": 1,
+  "data.job.attendanceMode": 1,
+  "data.job.dateOfJoining": 1,
+  "data.job.reportingManagerId": 1,
+  "data.job.shiftId": 1,
+  "data.job.leavepolicy": 1,
   "data.job.designation": 1,
-  "data.job.status": 1,
   "data.job.joinDate": 1,
+  "data.compensation.salary": 1,
+  "data.compensation.payFrequency": 1,
+  "data.compensation.salaryStructure.basic": 1,
+  "data.compensation.salaryStructure.hra": 1,
+  "data.compensation.salaryStructure.allowances": 1,
+  "data.compensation.salaryStructure.gross": 1,
+  "data.compensation.salaryStructure.effectiveFrom": 1,
+  "data.compensation.salaryHistory": 1,
+  "data.address.currentAddress": 1,
+  "data.address.permanentAddress": 1,
+  "data.address.city": 1,
+  "data.address.state": 1,
+  "data.address.country": 1,
+  "data.address.postalCode": 1,
+  "data.bank.bankName": 1,
+  "data.bank.accountNumber": 1,
+  "data.bank.ifscCode": 1,
+  "data.bank.branch": 1,
+  "data.legal.panNumber": 1,
+  "data.legal.aadhaarNumber": 1,
+  "data.legal.uan": 1,
+  "data.documents.type": 1,
+  "data.documents.name": 1,
+  "data.documents.url": 1,
+  "data.payroll.payrollId": 1,
+  "data.payroll.payrollGroupId": 1,
+  "data.payroll.payslipPreference": 1,
+  "data.tax.taxRegime": 1,
+  "data.tax.taxDeclarationSubmitted": 1,
   "meta.createdAt": 1,
 } as const;
 
@@ -190,7 +228,17 @@ export class EmployeeDAO {
           localField: "data.job.shiftId",
           foreignField: "_id",
           as: "data.job.shiftId",
-          pipeline: [{ $project: { "data.name": 1 } }],
+          pipeline: [
+            {
+              $project: {
+                "data.name": 1,
+                "data.workingHours": 1,
+                "data.halfDayThreshold": 1,
+                "data.startTime": 1,
+                "data.endTime": 1,
+              },
+            },
+          ],
         },
       },
       {
@@ -207,9 +255,7 @@ export class EmployeeDAO {
           localField: "data.job.leavepolicy",
           foreignField: "_id",
           as: "data.job.leavepolicy",
-          pipeline: [
-            { $project: { "data.leaveTypeName": 1, maxDaysPerYear: 1 } },
-          ],
+          pipeline: [{ $project: { leaveTypeName: 1, maxDaysPerYear: 1 } }],
         },
       },
 
@@ -239,13 +285,63 @@ export class EmployeeDAO {
         },
       },
 
-      // leave balance
       {
         $lookup: {
           from: "leavebalances",
           localField: "_id",
           foreignField: "employeeId",
           as: "leaveBalance",
+          pipeline: [
+            {
+              $lookup: {
+                from: "leavepolicies",
+                localField: "leave.policyId",
+                foreignField: "_id",
+                as: "policyDetails",
+                pipeline: [
+                  { $project: { leaveTypeName: 1, maxDaysPerYear: 1 } },
+                ],
+              },
+            },
+            {
+              $addFields: {
+                leave: {
+                  $map: {
+                    input: "$leave",
+                    as: "entry",
+                    in: {
+                      policyId: "$$entry.policyId",
+                      total: "$$entry.total",
+                      used: "$$entry.used",
+                      balance: "$$entry.balance",
+                      leaveTypeName: {
+                        $let: {
+                          vars: {
+                            matched: {
+                              $arrayElemAt: [
+                                {
+                                  $filter: {
+                                    input: "$policyDetails",
+                                    as: "p",
+                                    cond: {
+                                      $eq: ["$$p._id", "$$entry.policyId"],
+                                    },
+                                  },
+                                },
+                                0,
+                              ],
+                            },
+                          },
+                          in: "$$matched.leaveTypeName",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            { $project: { policyDetails: 0 } },
+          ],
         },
       },
       { $unwind: { path: "$leaveBalance", preserveNullAndEmptyArrays: true } },
