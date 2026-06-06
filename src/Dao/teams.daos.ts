@@ -54,11 +54,15 @@ export class TeamsDao {
         },
       },
 
+      // ✅ CHANGED: use let/pipeline to project data.name before unwinding
       {
         $lookup: {
           from: "departments",
-          localField: "departmentId",
-          foreignField: "_id",
+          let: { deptId: "$departmentId" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$deptId"] } } },
+            { $project: { _id: 1, name: "$data.name" } },
+          ],
           as: "department",
         },
       },
@@ -90,6 +94,7 @@ export class TeamsDao {
             $size: "$memberIds",
           },
 
+          // ✅ CHANGED: name is now at $department.name (already projected above)
           department: {
             _id: "$department._id",
             name: "$department.name",

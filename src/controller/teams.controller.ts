@@ -139,30 +139,27 @@ export class TeamsController {
       next(error);
     }
   };
- public getMyTeam = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const companyId = (req as any).user?.companyId;
-    const employeeId = (req as any).user?.employeeId;
+  public getMyTeam = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const companyId = req.user?.companyId;
+      const employeeId =  (req.user as any)?.employeeId;
 
-    if (!companyId || !employeeId) {
-      throw new Error("Unauthorized");
+      if (!companyId || !employeeId) {
+        throw new Error("Unauthorized");
+      }
+
+      const team = await this.teamsServices.getMyTeam(employeeId, companyId);
+
+      res.status(200).json({
+        success: true,
+        data: team,
+      });
+    } catch (error) {
+      next(error);
     }
-
-    const team = await this.teamsServices.getTeamByEmployee(
-      employeeId,
-      companyId,
-    );
-
-    res.status(200).json({
-      success: true,
-      data: team,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+  };
 }
