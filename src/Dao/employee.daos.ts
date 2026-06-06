@@ -5,6 +5,7 @@ import {
   EmployeeModel,
   LeaveBalanceModel,
   LeavePolicyModel,
+  TeamModel,
 } from "@hrmssuite/persistence";
 import mongoose, { Types } from "mongoose";
 import {
@@ -98,15 +99,31 @@ export class EmployeeDAO {
   ): Promise<Employee> {
     // Validate all policy IDs before starting transaction — read-only
     const policyIds = data.job.leavepolicy;
-
+    const reportingManager = data.job.reportingManagerId;
     const policies = await LeavePolicyModel.find({
       _id: { $in: policyIds },
+      companyId,
     });
 
     if (policies.length !== policyIds.length) {
       throw new Error("One or more leave policies not found");
     }
+    const manager = await EmployeeModel.findOne({
+      _id: reportingManager,
+      companyId,
+    });
+    if (!manager) {
+      throw new Error("Reporting manager not found");
+    }
+    const departmentId = manager.data.job.department;
+    const existingEmployee = await EmployeeModel.findOne({
+      companyId,
+      "data.basic.email": data.basic.email,
+    });
 
+    if (existingEmployee) {
+      throw new Error("Employee already exists");
+    }
     const session = await mongoose.startSession();
     try {
       session.startTransaction();
@@ -141,7 +158,32 @@ export class EmployeeDAO {
         ],
         { session },
       );
-
+      await TeamModel.updateOne(
+        {
+          reportingManagerId: reportingManager,
+          companyId,
+        },
+        {
+          $setOnInsert: {
+            companyId,
+            departmentId,
+            reportingManagerId: reportingManager,
+            name: `${manager.data.basic.firstName} Team`,
+            chatChannelId: null,
+          },
+          $addToSet: {
+            memberIds: created._id,
+          },
+          $set: {
+            "meta.updatedAt": new Date(),
+          },
+        },
+        {
+          upsert: true,
+          session,
+          setDefaultsOnInsert: true,
+        },
+      );
       await session.commitTransaction();
       return created;
     } catch (error) {
@@ -529,6 +571,11 @@ export class EmployeeDAO {
 
       if (!existingEmployee) throw new Error("Employee not found");
 
+      const oldReportingManagerId =
+        existingEmployee.data.job.reportingManagerId?.toString();
+
+      const newReportingManagerId = data.job?.reportingManagerId?.toString();
+
       const oldPolicyIds: Types.ObjectId[] =
         existingEmployee.data.job.leavepolicy; // Types.ObjectId[]
       const currentVersion = existingEmployee.meta.version ?? 1;
@@ -564,6 +611,68 @@ export class EmployeeDAO {
         throw new Error(
           "Concurrent modification detected — please retry the update.",
         );
+      }
+      const managerChanged =
+        data.job &&
+        Object.prototype.hasOwnProperty.call(data.job, "reportingManagerId");
+      if (managerChanged && oldReportingManagerId !== newReportingManagerId) {
+        // Remove from old manager's team
+        if (oldReportingManagerId) {
+          await TeamModel.updateOne(
+            {
+              reportingManagerId: oldReportingManagerId,
+              companyId: companyOid,
+            },
+            {
+              $pull: {
+                memberIds: employeeOid,
+              },
+              $set: {
+                "meta.updatedAt": new Date(),
+              },
+            },
+            { session },
+          );
+        }
+
+        // Add to new manager's team
+        if (newReportingManagerId) {
+          const newManager = await EmployeeModel.findOne({
+            _id: newReportingManagerId,
+            companyId: companyOid,
+          }).session(session);
+
+          if (!newManager) {
+            throw new Error("New reporting manager not found");
+          }
+
+          await TeamModel.updateOne(
+            {
+              reportingManagerId: newReportingManagerId,
+              companyId: companyOid,
+            },
+            {
+              $setOnInsert: {
+                companyId: companyOid,
+                departmentId: newManager.data.job.department,
+                reportingManagerId: newManager._id,
+                name: `${newManager.data.basic.firstName} Team`,
+                chatChannelId: null,
+              },
+              $addToSet: {
+                memberIds: employeeOid,
+              },
+              $set: {
+                "meta.updatedAt": new Date(),
+              },
+            },
+            {
+              upsert: true,
+              session,
+              setDefaultsOnInsert: true,
+            },
+          );
+        }
       }
 
       // Handle leave policy array change
