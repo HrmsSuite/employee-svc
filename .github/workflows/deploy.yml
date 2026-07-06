@@ -26,7 +26,11 @@ jobs:
           else
             echo "NPM_TOKEN exists"
           fi
-
+      - name: Verify package access
+        run: |
+          echo "@hrmssuite:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
+          npm view @hrmssuite/persistence
       - name: Build Docker Image
         run: |
           docker build \
