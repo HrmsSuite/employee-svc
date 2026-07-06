@@ -17,6 +17,8 @@ endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
   overtimeEligible: z.boolean().optional(),
 
   gracePeriodMinutes: z.number().min(0).optional(),
+  
+  overtimeAfterMinutes: z.number().min(0).optional(),
 
   isNightShift: z.boolean().optional(),
 

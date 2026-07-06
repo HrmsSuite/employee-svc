@@ -6,8 +6,10 @@ COPY package*.json ./
 COPY .npmrc ./
 
 ARG NPM_TOKEN
-RUN sed -i "s|\${NPM_TOKEN}|$NPM_TOKEN|g" .npmrc
+ 
 
+RUN sed -i "s|\${NPM_TOKEN}|$NPM_TOKEN|g" .npmrc
+ 
 RUN npm install
 
 COPY . .
