@@ -46,4 +46,4 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         with:
-          args: redeploy --service ${{ secrets.RAILWAY_EMPLOYEE_SERVICE_ID }} -y
+          args: railway redeploy --service ${{ secrets.RAILWAY_SERVICE_ID }} -y
