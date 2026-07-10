@@ -297,7 +297,18 @@ export class EmployeeDAO {
           localField: "data.job.leavepolicy",
           foreignField: "_id",
           as: "data.job.leavepolicy",
-          pipeline: [{ $project: { leaveTypeName: 1, maxDaysPerYear: 1 } }],
+          pipeline: [
+            {
+              $project: {
+                leaveTypeName: 1,
+                maxDaysPerYear: 1,
+                backdatedAllowed: 1,
+                maxBackdatedDays: 1,
+                advanceNoticeDays: 1,
+                approvalLevels: 1,
+              },
+            },
+          ],
         },
       },
 
