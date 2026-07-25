@@ -11,6 +11,19 @@ import {
   EmployeeQueryFilters,
   PaginatedEmployees,
 } from "../typings/employee.typings";
+import { AppError } from "../helpers/error";
+
+/**
+ * Re-throws AppError (NotFoundError / ValidationError / ConflictError /
+ * BusinessRuleError / ConcurrentUpdateError) as-is so the controller can
+ * map it to the right HTTP status. Anything else gets wrapped in a plain
+ * Error with a fallback message, same as before.
+ */
+function rethrow(error: unknown, fallbackMessage: string): never {
+  if (error instanceof AppError) throw error;
+  const message = error instanceof Error ? error.message : fallbackMessage;
+  throw new Error(message);
+}
 
 export class EmployeeServices {
   private employeeDAO: EmployeeDAO;
@@ -28,17 +41,17 @@ export class EmployeeServices {
    * @param data      - Full employee data payload
    * @param companyId - Owning company's ObjectId string
    * @returns The newly created Employee document
-   * @throws {Error} If validation fails or the referenced leave policy does not exist
+   * @throws {AppError} NotFoundError / ConflictError / BusinessRuleError / ValidationError
    */
   public async createEmployee(
     data: EmployeeData,
     companyId: string,
   ): Promise<Employee> {
-    EmployeeSchema.parse(data);
+    const parsed = EmployeeSchema.parse(data) as unknown as EmployeeData;
 
     try {
       const createdEmployee = await this.employeeDAO.createEmployee(
-        data,
+        parsed,
         companyId,
       );
       return createdEmployee;
@@ -104,14 +117,9 @@ export class EmployeeServices {
     EmployeeIdSchema.parse(id);
 
     try {
-      const employee = await this.employeeDAO.findById(id, companyId);
-      return employee;
+      return await this.employeeDAO.findById(id, companyId);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch employee by id";
-      throw new Error(message);
+      rethrow(error, "Failed to fetch employee by id");
     }
   }
 
@@ -133,14 +141,9 @@ export class EmployeeServices {
     EmployeeEmailSchema.parse(email);
 
     try {
-      const employee = await this.employeeDAO.findByEmail(email, companyId);
-      return employee;
+      return await this.employeeDAO.findByEmail(email, companyId);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch employee by email";
-      throw new Error(message);
+      rethrow(error, "Failed to fetch employee by email");
     }
   }
 
@@ -162,37 +165,17 @@ export class EmployeeServices {
     EmployeeIdNumberSchema.parse(employeeId);
 
     try {
-      const employee = await this.employeeDAO.findByEmployeeId(
-        employeeId,
-        companyId,
-      );
-      return employee;
+      return await this.employeeDAO.findByEmployeeId(employeeId, companyId);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch employee by employee id";
-      throw new Error(message);
+      rethrow(error, "Failed to fetch employee by employee id");
     }
   }
 
   /**
    * Validates and partially updates an employee's data.
    *
-   * Only fields present in the payload are updated (partial patch semantics).
-   * When the leave policy changes, the DAO atomically replaces the leave
-   * balance entry, carrying forward any already-used days.
-   *
-   * Both id and data are validated before delegating to the DAO, which
-   * performs the update inside a transaction with optimistic concurrency control.
-   *
-   * @param id        - Employee ObjectId string
-   * @param data      - Partial employee data — only provided fields are updated
-   * @param companyId - Owning company's ObjectId string
-   * @param changedBy - ObjectId string of the user making the change (for audit trail)
-   * @returns Updated Employee document, or null if not found / soft-deleted
-   * @throws {Error} If validation fails, the new leave policy does not exist,
-   *                 or a concurrent modification is detected
+   * @throws {AppError} NotFoundError / ConflictError / BusinessRuleError /
+   *                     ConcurrentUpdateError / ValidationError
    */
   public async updateEmployee(
     id: string,
@@ -201,35 +184,25 @@ export class EmployeeServices {
     changedBy?: string,
   ): Promise<Employee | null> {
     EmployeeIdSchema.parse(id);
-    UpdateEmployeeSchema.parse(data);
+    const parsed = UpdateEmployeeSchema.parse(data) as Partial<EmployeeData>;
 
     try {
-      const updatedEmployee = await this.employeeDAO.updateEmployee(
+      return await this.employeeDAO.updateEmployee(
         id,
-        data,
+        parsed,
         companyId,
         changedBy,
       );
-      return updatedEmployee;
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to update employee";
-      throw new Error(message);
+      rethrow(error, "Failed to update employee");
     }
   }
 
   /**
-   * Soft-deletes an employee by setting meta.isDeleted = true.
+   * Soft-deletes an employee after the DAO confirms it's safe to do so
+   * (no pending leave/attendance/approval items, no active direct reports).
    *
-   * The employee will no longer appear in any find queries after deletion.
-   * A "deleted" audit trail entry is appended atomically in the same operation.
-   * Validates the id format before delegating to the DAO.
-   *
-   * @param id        - Employee ObjectId string
-   * @param companyId - Owning company's ObjectId string
-   * @param changedBy - ObjectId string of the user performing the deletion (for audit trail)
-   * @returns void
-   * @throws {Error} If id validation fails, or the employee is not found / already deleted
+   * @throws {AppError} NotFoundError / BusinessRuleError
    */
   public async softDelete(
     id: string,
@@ -241,9 +214,7 @@ export class EmployeeServices {
     try {
       await this.employeeDAO.softDelete(id, companyId, changedBy);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to delete employee";
-      throw new Error(message);
+      rethrow(error, "Failed to delete employee");
     }
   }
 }

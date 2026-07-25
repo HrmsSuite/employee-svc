@@ -6,7 +6,7 @@ export const ShiftInfoSchema = z.object({
 
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
 
-endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
+  endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
 
   workingHours: z.number().min(0, "Working hours must be positive"),
 
@@ -17,7 +17,7 @@ endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
   overtimeEligible: z.boolean().optional(),
 
   gracePeriodMinutes: z.number().min(0).optional(),
-  
+
   overtimeAfterMinutes: z.number().min(0).optional(),
 
   isNightShift: z.boolean().optional(),

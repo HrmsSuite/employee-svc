@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { EmployeeServices } from "../service/employee.services";
 import { ZodError } from "zod";
+import { AppError } from "../helpers/error";
 
 const handleZodError = (error: ZodError, res: Response): void => {
   res.status(400).json({
@@ -13,6 +14,32 @@ const handleZodError = (error: ZodError, res: Response): void => {
   });
 };
 
+/**
+ * Central error responder: maps typed AppErrors (NotFoundError,
+ * ValidationError, ConflictError, BusinessRuleError, ConcurrentUpdateError)
+ * to their matching HTTP status; falls back to `next(error)` for anything
+ * unexpected so it reaches the app-level error handler / logger.
+ */
+const handleKnownError = (
+  error: unknown,
+  res: Response,
+  next: NextFunction,
+): void => {
+  if (error instanceof ZodError) {
+    handleZodError(error, res);
+    return;
+  }
+  if (error instanceof AppError) {
+    res.status(error.statusCode).json({
+      success: false,
+      message: error.message,
+      code: error.code,
+    });
+    return;
+  }
+  next(error);
+};
+
 export class EmployeeController {
   private employeeServices: EmployeeServices;
 
@@ -20,23 +47,6 @@ export class EmployeeController {
     this.employeeServices = new EmployeeServices();
   }
 
-  /**
-   * POST /employees
-   *
-   * Creates a new employee record for the authenticated company.
-   *
-   * The full employee payload is read from `req.body` and validated by the
-   * service layer (EmployeeSchema). On success the newly created document is
-   * returned with HTTP 201.
-   *
-   * @param req  - Express request. Expects `req.companyId` (set by auth middleware)
-   *               and a valid employee payload in `req.body`.
-   * @param res  - Express response.
-   *               201 – employee created, body contains the new document.
-   *               400 – Zod validation error, body lists field-level issues.
-   * @param next - Express next function. Called on unexpected errors.
-   * @returns    Promise<void>
-   */
   public async createEmployee(
     req: Request,
     res: Response,
@@ -54,38 +64,10 @@ export class EmployeeController {
         data: createdEmployee,
       });
     } catch (error) {
-      if (error instanceof ZodError) {
-        handleZodError(error, res);
-        return;
-      }
-      next(error);
+      handleKnownError(error, res, next);
     }
   }
 
-  /**
-   * GET /employees
-   *
-   * Returns a paginated, filterable list of employees belonging to the
-   * authenticated company. All query parameters are optional.
-   *
-   * Supported query params:
-   * - `page`        {number}  1-based page number (default: 1, min: 1)
-   * - `limit`       {number}  Page size (default: 10, min: 1, max: 100)
-   * - `search`      {string}  Case-insensitive match on firstName / lastName / email
-   * - `department`  {string}  ObjectId — filters by data.job.department
-   * - `designation` {string}  ObjectId — filters by data.job.designation
-   * - `status`      {string}  Exact match on data.job.status
-   *
-   * Delegates to the unified `findAllEmployees` service method which resolves
-   * both the paginated data and the total count in a single DB round-trip.
-   *
-   * @param req  - Express request. Expects `req.companyId` and optional query params.
-   * @param res  - Express response.
-   *               200 – paginated result containing employees array, total count,
-   *                     and total pages.
-   * @param next - Express next function. Called on unexpected errors.
-   * @returns    Promise<void>
-   */
   public async findAll(
     req: Request,
     res: Response,
@@ -117,29 +99,10 @@ export class EmployeeController {
         data: result,
       });
     } catch (error) {
-      next(error);
+      handleKnownError(error, res, next);
     }
   }
 
-  /**
-   * GET /employees/:id
-   *
-   * Fetches a single employee by their MongoDB ObjectId, with all related
-   * entities (designation, department, shift, leave policy, reporting manager,
-   * leave balance) populated via a single aggregation pipeline in the service.
-   *
-   * Responds with 404 when no active (non-deleted) employee matches the given
-   * id within the authenticated company.
-   *
-   * @param req  - Express request. Expects `req.params.id` (MongoDB ObjectId string)
-   *               and `req.companyId`.
-   * @param res  - Express response.
-   *               200 – fully populated employee document.
-   *               400 – missing id param or Zod validation error on id format.
-   *               404 – employee not found or soft-deleted.
-   * @param next - Express next function. Called on unexpected errors.
-   * @returns    Promise<void>
-   */
   public async findById(
     req: Request,
     res: Response,
@@ -166,32 +129,10 @@ export class EmployeeController {
         data: employee,
       });
     } catch (error) {
-      if (error instanceof ZodError) {
-        handleZodError(error, res);
-        return;
-      }
-      next(error);
+      handleKnownError(error, res, next);
     }
   }
 
-  /**
-   * GET /employees/email/:email
-   *
-   * Fetches a single employee by their email address within the authenticated
-   * company. Useful for duplicate-checks during onboarding and for
-   * authentication flows that need to resolve a user record by email.
-   *
-   * The email format is validated by the service layer (EmployeeEmailSchema)
-   * before the DB is queried.
-   *
-   * @param req  - Express request. Expects `req.params.email` and `req.companyId`.
-   * @param res  - Express response.
-   *               200 – employee document matching the email.
-   *               400 – missing email param or Zod validation error on email format.
-   *               404 – employee not found or soft-deleted.
-   * @param next - Express next function. Called on unexpected errors.
-   * @returns    Promise<void>
-   */
   public async findByEmail(
     req: Request,
     res: Response,
@@ -221,36 +162,10 @@ export class EmployeeController {
         data: employee,
       });
     } catch (error) {
-      if (error instanceof ZodError) {
-        handleZodError(error, res);
-        return;
-      }
-      next(error);
+      handleKnownError(error, res, next);
     }
   }
 
-  /**
-   * GET /employees/employee-id/:employeeId
-   *
-   * Fetches a single employee by their human-readable business-level ID
-   * (e.g. "EMP001") within the authenticated company.
-   *
-   * Unlike the MongoDB ObjectId used internally, this identifier is assigned
-   * during onboarding and is the primary reference used in HR documents,
-   * payslips, and integrations with third-party systems.
-   *
-   * The employeeId format is validated by the service layer
-   * (EmployeeIdNumberSchema) before the DB is queried.
-   *
-   * @param req  - Express request. Expects `req.params.employeeId`
-   *               (business-level ID, e.g. "EMP001") and `req.companyId`.
-   * @param res  - Express response.
-   *               200 – employee document matching the business-level ID.
-   *               400 – missing employeeId param or Zod validation error.
-   *               404 – employee not found or soft-deleted.
-   * @param next - Express next function. Called on unexpected errors.
-   * @returns    Promise<void>
-   */
   public async findByEmployeeId(
     req: Request,
     res: Response,
@@ -282,38 +197,10 @@ export class EmployeeController {
         data: employee,
       });
     } catch (error) {
-      if (error instanceof ZodError) {
-        handleZodError(error, res);
-        return;
-      }
-      next(error);
+      handleKnownError(error, res, next);
     }
   }
 
-  /**
-   * PATCH /employees/:id
-   *
-   * Partially updates an employee's data (patch semantics — only fields
-   * present in `req.body` are modified). When the leave policy changes, the
-   * service atomically replaces the leave balance entry while carrying forward
-   * any already-used days.
-   *
-   * Both the id format and the partial payload are validated by the service
-   * layer (EmployeeIdSchema + UpdateEmployeeSchema) before the DB is touched.
-   * The update is performed inside a transaction with optimistic concurrency
-   * control to guard against lost updates.
-   *
-   * @param req  - Express request. Expects `req.params.id` (MongoDB ObjectId),
-   *               `req.companyId`, a partial employee payload in `req.body`,
-   *               and optionally `req.user.id` for the audit trail.
-   * @param res  - Express response.
-   *               200 – updated employee document.
-   *               400 – missing id param or Zod validation error.
-   *               404 – employee not found or soft-deleted.
-   * @param next - Express next function. Called on unexpected errors (including
-   *               concurrent-modification conflicts).
-   * @returns    Promise<void>
-   */
   public async updateEmployee(
     req: Request,
     res: Response,
@@ -345,35 +232,10 @@ export class EmployeeController {
         data: updatedEmployee,
       });
     } catch (error) {
-      if (error instanceof ZodError) {
-        handleZodError(error, res);
-        return;
-      }
-      next(error);
+      handleKnownError(error, res, next);
     }
   }
 
-  /**
-   * DELETE /employees/:id
-   *
-   * Soft-deletes an employee by setting `meta.isDeleted = true`. The employee
-   * will no longer appear in any list or lookup queries after this operation.
-   *
-   * A "deleted" audit-trail entry is appended atomically in the same DB
-   * operation. The id format is validated by the service layer
-   * (EmployeeIdSchema) before anything is written. The service will throw if
-   * the employee is not found or is already deleted.
-   *
-   * @param req  - Express request. Expects `req.params.id` (MongoDB ObjectId),
-   *               `req.companyId`, and optionally `req.user.id` for the audit
-   *               trail.
-   * @param res  - Express response.
-   *               200 – deletion acknowledged (no body data).
-   *               400 – missing id param or Zod validation error on id format.
-   * @param next - Express next function. Called on unexpected errors (including
-   *               employee-not-found / already-deleted errors from the service).
-   * @returns    Promise<void>
-   */
   public async softDelete(
     req: Request,
     res: Response,
@@ -394,11 +256,7 @@ export class EmployeeController {
         message: "Employee deleted successfully",
       });
     } catch (error) {
-      if (error instanceof ZodError) {
-        handleZodError(error, res);
-        return;
-      }
-      next(error);
+      handleKnownError(error, res, next);
     }
   }
 }

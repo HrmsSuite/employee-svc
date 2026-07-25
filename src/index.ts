@@ -7,7 +7,7 @@ import { mongoDB } from "./common/DB/connect.js";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000; 
+const PORT = process.env.PORT || 5000;
 app.use(
   cors({
     origin: [
@@ -16,7 +16,7 @@ app.use(
       "https://dev-hrms-suite.vercel.app",
     ],
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json({ limit: "50mb" }));

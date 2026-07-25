@@ -18,6 +18,7 @@ const EmployeeBasicSchema = z.object({
 const JobDetailsSchema = z.object({
   designation: z.string().min(1, "Designation is required"),
   department: z.string().min(1, "Department is required"),
+  roleIds: z.array(z.string()).optional(),
   employmentType: z.enum(["Full-time", "Part-time", "Contract", "Intern"]),
   dateOfJoining: z.coerce.date(),
   reportingManagerId: z.string().optional(),
