@@ -4,4 +4,3 @@ export * from "./employee.services";
 export * from "./shift.services";
 export * from "./teams.services";
 export * from "./hierarchy.service";
-export * from "./internalEmployee.service";
