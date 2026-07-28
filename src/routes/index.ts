@@ -5,6 +5,7 @@ import employeeRoute from "./employee.route.js";
 import shiftRoute from "./shift.route.js";
 import teamsRoute from "./teams.routes.js";
 import hierarchyRoute from "./hierarchy.routes.js";
+import internalEmployeeRoute from "./internalEmployee.route.js";
 
 const router = Router();
 
@@ -17,4 +18,5 @@ router.use(`${apiPath}/employees`, employeeRoute);
 router.use(`${apiPath}/shift`, shiftRoute);
 router.use(`${apiPath}/teams`, teamsRoute);
 router.use(`${apiPath}/internal/hierarchy`, hierarchyRoute);
+router.use(`${apiPath}/internal/employees`,internalEmployeeRoute,);
 export default router;
