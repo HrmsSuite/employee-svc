@@ -1,6 +1,8 @@
-import { ACCESS_SCOPES, AccessScopeResult, EmployeeModel } from "@hrmssuite/persistence";
-
- 
+import {
+  ACCESS_SCOPES,
+  AccessScopeResult,
+  EmployeeModel,
+} from "@hrmssuite/persistence";
 
 export class InternalEmployeeDao {
   public async searchEmployees(
@@ -8,27 +10,28 @@ export class InternalEmployeeDao {
     accessScope: AccessScopeResult,
   ) {
     switch (accessScope.scope) {
-      /**
-       * Company-wide access
-       */
       case ACCESS_SCOPES.ALL:
         return EmployeeModel.find({
           companyId,
-          isDeleted: false,
+          "meta.isDeleted": false,
         });
 
-      /**
-       * Self / Hierarchy access
-       */
       case ACCESS_SCOPES.SELF:
-      case ACCESS_SCOPES.HIERARCHY:
-        return EmployeeModel.find({
+      case ACCESS_SCOPES.HIERARCHY: {
+        // 👇 Temporary debugging
+        const employees = await EmployeeModel.find({
           companyId,
           _id: {
             $in: accessScope.employeeIds ?? [],
           },
-          isDeleted: false,
         });
+
+        console.log("CompanyId:", companyId);
+        console.log("EmployeeIds:", accessScope.employeeIds);
+        console.log("Employees Found:", employees.length);
+
+        return employees;
+      }
 
       default:
         return [];
@@ -36,5 +39,4 @@ export class InternalEmployeeDao {
   }
 }
 
-export const internalEmployeeDao =
-  new InternalEmployeeDao();
+export const internalEmployeeDao = new InternalEmployeeDao();
