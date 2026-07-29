@@ -38,17 +38,18 @@ export class HierarchyController {
 
       const companyId = req.companyId!;
 
-      const reports = await hierarchyService.getAllReports(
+      const isAdmin = req.user?.role?.includes("ADMIN") ?? false;
+      const visibleEmployeeIds = await hierarchyService.getVisibleEmployeeIds(
         companyId,
         employeeId,
+        isAdmin,
       );
 
       return res.status(200).json({
         success: true,
         data: {
           me: employeeId,
-          reports,
-          visibleEmployeeIds: [employeeId, ...reports],
+          visibleEmployeeIds,
         },
       });
     } catch (err) {

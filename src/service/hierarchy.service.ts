@@ -31,6 +31,20 @@ export class HierarchyService {
 
     return employeeIds;
   }
+  public async getVisibleEmployeeIds(
+  companyId: string,
+  employeeId: string,
+  isAdmin: boolean,
+): Promise<string[]> {
+  if (isAdmin) {
+    const employees = await this.dao.findAllEmployeeIds(companyId);
+    return employees.map((e) => e._id.toString());
+  }
+
+  const reports = await this.getAllReports(companyId, employeeId);
+
+  return [employeeId, ...reports];
+}
 }
 
 export const hierarchyService = new HierarchyService();
