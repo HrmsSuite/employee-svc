@@ -14,7 +14,7 @@ router.get("/reports/:employeeId", authenticate, (req, res, next) =>
   hierarchyController.getReports(req, res, next),
 );
 
-router.get("/hierarchy/me", authenticate, (req, res, next) =>
+router.get("/", authenticate, (req, res, next) =>
   hierarchyController.getMyReports(req, res, next),
 );
 
