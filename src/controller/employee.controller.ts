@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { EmployeeServices } from "../service/employee.services";
 import { ZodError } from "zod";
 import { AppError } from "../helpers/error";
+import { hierarchyService } from "../service";
 
 const handleZodError = (error: ZodError, res: Response): void => {
   res.status(400).json({
@@ -88,10 +89,18 @@ export class EmployeeController {
         status: req.query.status as string | undefined,
       };
 
-      const result = await this.employeeServices.findAllEmployees(
+      const isAdmin = req.user?.role === "admin";
+
+      const visibleEmployeeIds = await hierarchyService.getVisibleEmployeeIds(
         companyId,
-        filters,
+        req.user?.employeeId ?? "",
+        isAdmin,
       );
+
+      const result = await this.employeeServices.findAllEmployees(companyId, {
+        ...filters,
+        visibleEmployeeIds,
+      });
 
       res.status(200).json({
         success: true,

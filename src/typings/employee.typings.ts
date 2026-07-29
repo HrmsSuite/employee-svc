@@ -7,6 +7,7 @@ export interface EmployeeQueryFilters {
   status?: string;
   page?: number;
   limit?: number;
+  visibleEmployeeIds?: string[];
 }
 
 export interface PaginatedEmployees {

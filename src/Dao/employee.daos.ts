@@ -546,6 +546,11 @@ export class EmployeeDAO {
       companyId: new Types.ObjectId(companyId),
       "meta.isDeleted": false,
     };
+    if (filters.visibleEmployeeIds && filters.visibleEmployeeIds.length > 0) {
+      matchStage["_id"] = {
+        $in: filters.visibleEmployeeIds.map((id) => new Types.ObjectId(id)),
+      };
+    }
 
     if (filters.status) matchStage["data.job.status"] = filters.status;
     if (filters.department)
