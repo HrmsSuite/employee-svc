@@ -28,11 +28,13 @@ export class HierarchyController {
   }
   public async getMyReports(req: Request, res: Response, next: NextFunction) {
     try {
-      const { employeeId } = req.params;
-
-      if (!employeeId || Array.isArray(employeeId)) {
+      if (!req.user?.employeeId) {
         throw new ValidationError("Invalid employee id");
       }
+
+      const employeeId = req.user.employeeId;
+
+      console.log("GET_MY_REPORTS employeeId:", employeeId);
 
       const companyId = req.companyId!;
 
