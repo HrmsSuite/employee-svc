@@ -26,6 +26,33 @@ export class HierarchyController {
       next(err);
     }
   }
+  public async getMyReports(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { employeeId } = req.params;
+
+      if (!employeeId || Array.isArray(employeeId)) {
+        throw new ValidationError("Invalid employee id");
+      }
+
+      const companyId = req.companyId!;
+
+      const reports = await hierarchyService.getAllReports(
+        companyId,
+        employeeId,
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          me: employeeId,
+          reports,
+          visibleEmployeeIds: [employeeId, ...reports],
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const hierarchyController = new HierarchyController();
