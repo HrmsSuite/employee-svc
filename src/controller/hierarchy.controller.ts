@@ -28,21 +28,39 @@ export class HierarchyController {
   }
   public async getMyReports(req: Request, res: Response, next: NextFunction) {
     try {
+      const companyId = req.companyId!;
+
+      // JWT contains: role: "admin"
+      const isAdmin = req.user?.role?.toLowerCase() === "admin";
+
+      // Admin can access all employees without an employeeId
+      if (isAdmin) {
+        const visibleEmployeeIds = await hierarchyService.getVisibleEmployeeIds(
+          companyId,
+          "", // not required for admin
+          true,
+        );
+
+        return res.status(200).json({
+          success: true,
+          data: {
+            me: null,
+            visibleEmployeeIds,
+          },
+        });
+      }
+
+      // Non-admins must have an employeeId
       if (!req.user?.employeeId) {
         throw new ValidationError("Invalid employee id");
       }
 
       const employeeId = req.user.employeeId;
 
-      console.log("GET_MY_REPORTS employeeId:", employeeId);
-
-      const companyId = req.companyId!;
-
-      const isAdmin = req.user?.role?.includes("ADMIN") ?? false;
       const visibleEmployeeIds = await hierarchyService.getVisibleEmployeeIds(
         companyId,
         employeeId,
-        isAdmin,
+        false,
       );
 
       return res.status(200).json({

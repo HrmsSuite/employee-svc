@@ -10,8 +10,8 @@ export class HierarchyDao {
     }).select("_id");
   }
   public async findAllEmployeeIds(companyId: string) {
-    return EmployeeModel.find({ companyId }).select("_id");
-  }
+  return EmployeeModel.find({ companyId }).select("_id");
+}
 }
 
 export const hierarchyDao = new HierarchyDao();
