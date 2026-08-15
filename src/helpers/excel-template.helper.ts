@@ -38,7 +38,14 @@ interface ColumnDef {
   field: string;
   required: boolean;
   width: number;
-  type: "text" | "number" | "date" | "boolean" | "enum" | "lookup" | "multiLookup";
+  type:
+    | "text"
+    | "number"
+    | "date"
+    | "boolean"
+    | "enum"
+    | "lookup"
+    | "multiLookup";
   enumValues?: string[];
   note?: string;
   sample?: string;
@@ -263,79 +270,6 @@ export const COLUMN_DEFS: ColumnDef[] = [
     sample: "",
   },
 
-  // ── COMPENSATION ─────────────────────────────────────────────────────────
-  {
-    key: "salary",
-    header: "Salary (CTC) *",
-    field: "compensation.salary",
-    required: true,
-    width: 18,
-    type: "number",
-    note: "Annual or gross salary amount. Must be a positive number.",
-    sample: "600000",
-  },
-  {
-    key: "payFrequency",
-    header: "Pay Frequency *",
-    field: "compensation.payFrequency",
-    required: true,
-    width: 18,
-    type: "enum",
-    enumValues: ["Monthly", "Bi-weekly"],
-    note: "Select from dropdown: Monthly or Bi-weekly.",
-    sample: "Monthly",
-  },
-  {
-    key: "salaryBasic",
-    header: "Basic Salary",
-    field: "compensation.salaryStructure.basic",
-    required: false,
-    width: 16,
-    type: "number",
-    note: "Optional. Basic component of salary. Must be >= 0.",
-    sample: "25000",
-  },
-  {
-    key: "salaryHra",
-    header: "HRA",
-    field: "compensation.salaryStructure.hra",
-    required: false,
-    width: 14,
-    type: "number",
-    note: "Optional. House Rent Allowance. Must be >= 0.",
-    sample: "10000",
-  },
-  {
-    key: "salaryAllowances",
-    header: "Allowances",
-    field: "compensation.salaryStructure.allowances",
-    required: false,
-    width: 16,
-    type: "number",
-    note: "Optional. Other allowances. Must be >= 0.",
-    sample: "5000",
-  },
-  {
-    key: "salaryGross",
-    header: "Gross Salary",
-    field: "compensation.salaryStructure.gross",
-    required: false,
-    width: 16,
-    type: "number",
-    note: "Optional. Gross salary (Basic + HRA + Allowances). Must be >= 0.",
-    sample: "40000",
-  },
-  {
-    key: "salaryEffectiveFrom",
-    header: "Salary Effective From",
-    field: "compensation.salaryStructure.effectiveFrom",
-    required: false,
-    width: 22,
-    type: "date",
-    note: "Optional. Format: DD-MM-YYYY. The date from which this salary structure is effective.",
-    sample: "01-01-2024",
-  },
-
   // ── ADDRESS ───────────────────────────────────────────────────────────────
   {
     key: "currentAddress",
@@ -533,7 +467,10 @@ type LookupKey = (typeof LOOKUP_KEYS)[number];
 
 // ─── Shared cell border ───────────────────────────────────────────────────────
 function thinBorder(): Partial<ExcelJS.Borders> {
-  const side: Partial<ExcelJS.Border> = { style: "thin", color: { argb: COLORS.HEADER_BORDER } };
+  const side: Partial<ExcelJS.Border> = {
+    style: "thin",
+    color: { argb: COLORS.HEADER_BORDER },
+  };
   return { top: side, left: side, bottom: side, right: side };
 }
 
@@ -542,12 +479,18 @@ function styleHeader(cell: ExcelJS.Cell, required: boolean): void {
   cell.fill = {
     type: "pattern",
     pattern: "solid",
-    fgColor: { argb: required ? COLORS.REQUIRED_HEADER_BG : COLORS.OPTIONAL_HEADER_BG },
+    fgColor: {
+      argb: required ? COLORS.REQUIRED_HEADER_BG : COLORS.OPTIONAL_HEADER_BG,
+    },
   };
   cell.font = {
     bold: true,
     size: 11,
-    color: { argb: required ? COLORS.REQUIRED_HEADER_FONT : COLORS.OPTIONAL_HEADER_FONT },
+    color: {
+      argb: required
+        ? COLORS.REQUIRED_HEADER_FONT
+        : COLORS.OPTIONAL_HEADER_FONT,
+    },
     name: "Calibri",
   };
   cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
@@ -569,40 +512,43 @@ function styleHeader(cell: ExcelJS.Cell, required: boolean): void {
  * @param companyId  MongoDB ObjectId string of the requesting company
  * @returns          Raw Excel buffer ready to stream to the client
  */
-export async function generateEmployeeTemplate(companyId: string): Promise<Buffer> {
+export async function generateEmployeeTemplate(
+  companyId: string,
+): Promise<Buffer> {
   const companyOid = new Types.ObjectId(companyId);
 
   // ── 1. Fetch all reference data in parallel ────────────────────────────────
-  const [departments, designations, shifts, roles, policies, managers] = await Promise.all([
-    DepartmentModel.find(
-      { companyId: companyOid, "meta.isDeleted": { $ne: true } },
-      { _id: 0, "data.name": 1 },
-    ).lean(),
-    DesignationModel.find(
-      { companyId: companyOid, "meta.isDeleted": { $ne: true } },
-      { _id: 0, "data.name": 1 },
-    ).lean(),
-    ShiftModel.find(
-      { companyId: companyOid, "meta.isDeleted": { $ne: true } },
-      { _id: 0, "data.name": 1 },
-    ).lean(),
-    RolesModel.find(
-      { companyId: companyOid, isDeleted: false, isActive: true },
-      { _id: 0, name: 1 },
-    ).lean(),
-    LeavePolicyModel.find(
-      { companyId: companyOid, isDeleted: { $ne: true } },
-      { _id: 0, leaveTypeName: 1 },
-    ).lean(),
-    EmployeeModel.find(
-      {
-        companyId: companyOid,
-        "meta.isDeleted": false,
-        "data.job.employeeStatus": "Active",
-      },
-      { _id: 0, "data.basic.firstName": 1, "data.basic.lastName": 1 },
-    ).lean(),
-  ]);
+  const [departments, designations, shifts, roles, policies, managers] =
+    await Promise.all([
+      DepartmentModel.find(
+        { companyId: companyOid, "meta.isDeleted": { $ne: true } },
+        { _id: 0, "data.name": 1 },
+      ).lean(),
+      DesignationModel.find(
+        { companyId: companyOid, "meta.isDeleted": { $ne: true } },
+        { _id: 0, "data.name": 1 },
+      ).lean(),
+      ShiftModel.find(
+        { companyId: companyOid, "meta.isDeleted": { $ne: true } },
+        { _id: 0, "data.name": 1 },
+      ).lean(),
+      RolesModel.find(
+        { companyId: companyOid, isDeleted: false, isActive: true },
+        { _id: 0, name: 1 },
+      ).lean(),
+      LeavePolicyModel.find(
+        { companyId: companyOid, isDeleted: { $ne: true } },
+        { _id: 0, leaveTypeName: 1 },
+      ).lean(),
+      EmployeeModel.find(
+        {
+          companyId: companyOid,
+          "meta.isDeleted": false,
+          "data.job.employeeStatus": "Active",
+        },
+        { _id: 0, "data.basic.firstName": 1, "data.basic.lastName": 1 },
+      ).lean(),
+    ]);
 
   // Map fetched docs → plain string arrays
   const lookupData: Record<LookupKey, string[]> = {
@@ -635,17 +581,38 @@ export async function generateEmployeeTemplate(companyId: string): Promise<Buffe
   instrSheet.getColumn(4).width = 20;
   instrSheet.getColumn(5).width = 16;
 
-  const instrTitleRow = instrSheet.addRow(["HRMS Suite — Employee Bulk Upload Instructions"]);
-  instrTitleRow.getCell(1).font = { bold: true, size: 16, color: { argb: "FF1E3A5F" }, name: "Calibri" };
+  const instrTitleRow = instrSheet.addRow([
+    "HRMS Suite — Employee Bulk Upload Instructions",
+  ]);
+  instrTitleRow.getCell(1).font = {
+    bold: true,
+    size: 16,
+    color: { argb: "FF1E3A5F" },
+    name: "Calibri",
+  };
   instrSheet.mergeCells(`A1:E1`);
   instrTitleRow.height = 32;
 
   instrSheet.addRow([]); // spacer
 
-  const colHeaders = instrSheet.addRow(["Column", "Description / Notes", "Required?", "Sample Value", "Format"]);
+  const colHeaders = instrSheet.addRow([
+    "Column",
+    "Description / Notes",
+    "Required?",
+    "Sample Value",
+    "Format",
+  ]);
   colHeaders.eachCell((cell) => {
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLORS.NOTE_HEADER_BG } };
-    cell.font = { bold: true, color: { argb: COLORS.NOTE_HEADER_FONT }, name: "Calibri" };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: COLORS.NOTE_HEADER_BG },
+    };
+    cell.font = {
+      bold: true,
+      color: { argb: COLORS.NOTE_HEADER_FONT },
+      name: "Calibri",
+    };
     cell.alignment = { horizontal: "center", vertical: "middle" };
     cell.border = thinBorder();
   });
@@ -664,7 +631,7 @@ export async function generateEmployeeTemplate(companyId: string): Promise<Buffe
           : col.type === "boolean"
             ? "TRUE / FALSE"
             : col.type === "enum"
-              ? col.enumValues?.join(", ") ?? ""
+              ? (col.enumValues?.join(", ") ?? "")
               : col.type === "lookup"
                 ? "Select from dropdown"
                 : col.type === "multiLookup"
@@ -674,7 +641,11 @@ export async function generateEmployeeTemplate(companyId: string): Promise<Buffe
     row.eachCell((cell) => {
       cell.alignment = { vertical: "top", wrapText: true };
       if (i % 2 === 0) {
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF3F6FF" } };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFF3F6FF" },
+        };
       }
       cell.border = thinBorder();
       cell.font = { name: "Calibri", size: 10 };
@@ -691,7 +662,12 @@ export async function generateEmployeeTemplate(companyId: string): Promise<Buffe
   // Key notes at the bottom
   instrSheet.addRow([]);
   const notesTitle = instrSheet.addRow(["⚠️  Important Notes"]);
-  notesTitle.getCell(1).font = { bold: true, size: 12, color: { argb: "FFCC0000" }, name: "Calibri" };
+  notesTitle.getCell(1).font = {
+    bold: true,
+    size: 12,
+    color: { argb: "FFCC0000" },
+    name: "Calibri",
+  };
 
   const notes = [
     "• Do NOT rename or reorder columns. The upload parser reads by column position.",
@@ -736,8 +712,17 @@ export async function generateEmployeeTemplate(companyId: string): Promise<Buffe
     "🟡 Amber headers = Required fields     🔵 Blue headers = Optional fields     📋 Use dropdowns where provided     ⚠️  See Instructions sheet for details",
   ]);
   dataSheet.mergeCells(`A1:${colIdxToLetter(COLUMN_DEFS.length)}1`);
-  legendRow.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFDE7" } };
-  legendRow.getCell(1).font = { italic: true, size: 10, color: { argb: "FF555555" }, name: "Calibri" };
+  legendRow.getCell(1).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFFFFDE7" },
+  };
+  legendRow.getCell(1).font = {
+    italic: true,
+    size: 10,
+    color: { argb: "FF555555" },
+    name: "Calibri",
+  };
   legendRow.getCell(1).alignment = { horizontal: "center", vertical: "middle" };
   legendRow.height = 22;
 
@@ -754,8 +739,17 @@ export async function generateEmployeeTemplate(companyId: string): Promise<Buffe
   const sampleRow = dataSheet.addRow(COLUMN_DEFS.map((c) => c.sample ?? ""));
   sampleRow.height = 20;
   sampleRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLORS.SAMPLE_ROW_BG } };
-    cell.font = { italic: true, color: { argb: "FF2D6A4F" }, size: 10, name: "Calibri" };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: COLORS.SAMPLE_ROW_BG },
+    };
+    cell.font = {
+      italic: true,
+      color: { argb: "FF2D6A4F" },
+      size: 10,
+      name: "Calibri",
+    };
     cell.alignment = { vertical: "middle" };
     cell.border = thinBorder();
     // Format date columns as text (we parse DD-MM-YYYY ourselves)
@@ -783,48 +777,62 @@ export async function generateEmployeeTemplate(companyId: string): Promise<Buffe
     if (col.type === "enum" && col.enumValues && col.enumValues.length > 0) {
       const formulaStr = `"${col.enumValues.join(",")}"`;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (dataSheet as any).dataValidations.add(`${excelCol}4:${excelCol}${MAX_ROWS}`, {
-        type: "list",
-        allowBlank: !col.required,
-        formulae: [formulaStr],
-        showErrorMessage: true,
-        errorStyle: "stop",
-        errorTitle: "Invalid value",
-        error: `Please select a valid option: ${col.enumValues.join(", ")}`,
-      });
+      (dataSheet as any).dataValidations.add(
+        `${excelCol}4:${excelCol}${MAX_ROWS}`,
+        {
+          type: "list",
+          allowBlank: !col.required,
+          formulae: [formulaStr],
+          showErrorMessage: true,
+          errorStyle: "stop",
+          errorTitle: "Invalid value",
+          error: `Please select a valid option: ${col.enumValues.join(", ")}`,
+        },
+      );
     }
 
     // ── Lookup / multiLookup: range-based dropdown from __Lookups ─────────
-    if ((col.type === "lookup" || col.type === "multiLookup") && col.key in lookupColMap) {
+    if (
+      (col.type === "lookup" || col.type === "multiLookup") &&
+      col.key in lookupColMap
+    ) {
       const lKey = col.key as LookupKey;
       const lookupNames = lookupData[lKey];
       if (lookupNames.length > 0) {
         const lCol = colIdxToLetter(lookupColMap[lKey]);
         // Rows 2..(n+1) in __Lookups (row 1 is the header label)
         const lastLookupRow = lookupNames.length + 1;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (dataSheet as any).dataValidations.add(`${excelCol}4:${excelCol}${MAX_ROWS}`, {
-          type: "list",
-          allowBlank: !col.required,
-          formulae: [`__Lookups!$${lCol}$2:$${lCol}$${lastLookupRow}`],
-          showErrorMessage: true,
-          errorStyle: col.required ? "stop" : "warning",
-          errorTitle: col.required ? "Selection required" : "Unrecognised value",
-          error: col.required
-            ? `Please select a valid ${col.header.replace(" *", "")} from the dropdown.`
-            : `"${col.header}" value not found in the list. Leave blank or choose from the dropdown.`,
-        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (dataSheet as any).dataValidations.add(
+          `${excelCol}4:${excelCol}${MAX_ROWS}`,
+          {
+            type: "list",
+            allowBlank: !col.required,
+            formulae: [`__Lookups!$${lCol}$2:$${lCol}$${lastLookupRow}`],
+            showErrorMessage: true,
+            errorStyle: col.required ? "stop" : "warning",
+            errorTitle: col.required
+              ? "Selection required"
+              : "Unrecognised value",
+            error: col.required
+              ? `Please select a valid ${col.header.replace(" *", "")} from the dropdown.`
+              : `"${col.header}" value not found in the list. Leave blank or choose from the dropdown.`,
+          },
+        );
       }
     }
 
     // ── Boolean columns: restrict to TRUE/FALSE ───────────────────────────
     if (col.type === "boolean") {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (dataSheet as any).dataValidations.add(`${excelCol}4:${excelCol}${MAX_ROWS}`, {
-        type: "list",
-        allowBlank: true,
-        formulae: ['"TRUE,FALSE"'],
-      });
+      (dataSheet as any).dataValidations.add(
+        `${excelCol}4:${excelCol}${MAX_ROWS}`,
+        {
+          type: "list",
+          allowBlank: true,
+          formulae: ['"TRUE,FALSE"'],
+        },
+      );
     }
   });
 
@@ -835,7 +843,11 @@ export async function generateEmployeeTemplate(companyId: string): Promise<Buffe
     if (r % 2 === 0) {
       row.eachCell({ includeEmpty: true }, (cell, colNum) => {
         if (colNum <= COLUMN_DEFS.length) {
-          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLORS.ROW_ALT_BG } };
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: COLORS.ROW_ALT_BG },
+          };
         }
       });
     }

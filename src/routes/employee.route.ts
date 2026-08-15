@@ -7,10 +7,12 @@ import multer from "multer";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3 } from "../common/config/S3-upload";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { EmployeeBulkUploadController } from "../controller";
 
 const router = Router();
 const employeeController = new EmployeeController();
 const bulkUploadController = new BulkUploadController();
+const uploadController = new EmployeeBulkUploadController();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -72,6 +74,13 @@ router.get("/media/:folder/:filename", authenticate, async (req, res) => {
 // GET /employees/bulk/template — download the pre-filled Excel template
 router.get("/bulk/template", authenticate, (req, res, next) =>
   bulkUploadController.downloadTemplate(req, res, next),
+);
+
+router.post(
+  "/bulk/upload",
+  authenticate,
+  upload.single("file"), // expects field name "file"
+  (req, res, next) => uploadController.upload(req, res, next),
 );
 
 // ─────────────────────────────────────────────────────────────────────────────

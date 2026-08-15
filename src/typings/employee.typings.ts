@@ -15,3 +15,21 @@ export interface PaginatedEmployees {
   total: number;
   pages: number;
 }
+
+export interface GetAllEmployeeSalariesOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  departmentId?: string;
+  salaryStructureId?: string;
+}
+
+export interface GetAllEmployeeSalariesDAOOptions {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: string;
+  departmentId?: string;
+  salaryStructureId?: string;
+}

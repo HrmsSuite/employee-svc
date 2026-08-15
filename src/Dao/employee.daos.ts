@@ -25,7 +25,6 @@ import {
   validateUniqueFields,
   validateStatusTransition,
   validateEmploymentDates,
-  validateSalary,
   validateAttendanceModeShiftCompatibility,
 } from "../helpers/validation.helpers";
 import {
@@ -55,14 +54,6 @@ const LIST_PROJECT = {
   "data.job.leavepolicy": 1,
   "data.job.designation": 1,
   "data.job.joinDate": 1,
-  "data.compensation.salary": 1,
-  "data.compensation.payFrequency": 1,
-  "data.compensation.salaryStructure.basic": 1,
-  "data.compensation.salaryStructure.hra": 1,
-  "data.compensation.salaryStructure.allowances": 1,
-  "data.compensation.salaryStructure.gross": 1,
-  "data.compensation.salaryStructure.effectiveFrom": 1,
-  "data.compensation.salaryHistory": 1,
   "data.address.currentAddress": 1,
   "data.address.permanentAddress": 1,
   "data.address.city": 1,
@@ -105,7 +96,6 @@ const DIFF_TRACKED_PATHS: { path: string; label: string }[] = [
   { path: "data.job.employeeStatus", label: "employeeStatus" },
   { path: "data.basic.email", label: "email" },
   { path: "data.basic.phone", label: "phone" },
-  { path: "data.compensation.salary", label: "salary" },
 ];
 
 function getAtPath(obj: unknown, path: string): unknown {
@@ -240,7 +230,6 @@ export class EmployeeDAO {
       dateOfJoining: data.job.dateOfJoining,
       dateOfExit: data.job.dateOfExit,
     });
-    validateSalary(data.compensation?.salary);
     validateAttendanceModeShiftCompatibility(
       data.job.attendanceMode,
       data.job.shiftId,
@@ -552,7 +541,9 @@ export class EmployeeDAO {
       };
     }
 
-    if (filters.status) matchStage["data.job.status"] = filters.status;
+    if (filters.status) {
+      matchStage["data.job.employeeStatus"] = filters.status;
+    }
     if (filters.department)
       matchStage["data.job.department"] = new Types.ObjectId(
         filters.department,
@@ -776,8 +767,6 @@ export class EmployeeDAO {
         data.job?.dateOfJoining ?? existingEmployee.data.job.dateOfJoining,
       dateOfExit: data.job?.dateOfExit ?? existingEmployee.data.job.dateOfExit,
     });
-    if (data.compensation?.salary !== undefined)
-      validateSalary(data.compensation.salary);
     validateAttendanceModeShiftCompatibility(
       data.job?.attendanceMode ?? existingEmployee.data.job.attendanceMode,
       data.job?.shiftId ?? existingEmployee.data.job.shiftId,
@@ -943,7 +932,7 @@ export class EmployeeDAO {
       }
 
       // ---- Leave balance recalculation — only when the policy set actually changed ----
-      if (policyIdsChanged && newPolicies.length > 0) {
+      if (policyIdsChanged) {
         const currentBalance = await LeaveBalanceModel.findOne({
           employeeId: employeeOid,
           companyId: companyOid,
@@ -1043,7 +1032,7 @@ export class EmployeeDAO {
       AttendanceRegularize.countDocuments({
         employeeId: employeeOid,
         companyId: companyOid,
-        status: { $in: [] },
+        status: "PENDING",
       }),
       WorkflowModel.countDocuments({
         $or: [{ requestedBy: employeeOid }, { approverId: employeeOid }],

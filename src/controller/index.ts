@@ -4,3 +4,8 @@ export * from "./employee.controller";
 export * from "./shift.controller";
 export * from "./teams.controller";
 export * from "./hierarchy.controller";
+export * from "./salary-component.controller";
+export * from "./salary-structure.controller";
+export * from "./employee-salary.controller";
+export * from "./SalaryAuditLog.controller";
+export * from "./employee-bulk-upload.controller";

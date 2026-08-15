@@ -4,3 +4,7 @@ export * from "./employee.services";
 export * from "./shift.services";
 export * from "./teams.services";
 export * from "./hierarchy.service";
+export * from "./salary-component.service";
+export * from "./salary-structure.service";
+export * from "./employee-salary.service";
+export * from "./salary-audit-log.service";

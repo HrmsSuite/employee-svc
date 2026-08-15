@@ -37,20 +37,7 @@ const JobDetailsSchema = z.object({
   fullAndFinalSettled: z.boolean().optional(),
 });
 
-const SalaryStructureSchema = z.object({
-  basic: z.number().min(0),
-  hra: z.number().min(0),
-  allowances: z.number().min(0),
-  gross: z.number().min(0),
-  effectiveFrom: z.coerce.date(),
-});
 
-const CompensationSchema = z.object({
-  salary: z.number().min(0, "Salary must be positive"),
-  payFrequency: z.enum(["Monthly", "Bi-weekly"]),
-  salaryStructure: SalaryStructureSchema.optional(),
-  salaryHistory: z.array(SalaryStructureSchema).optional(),
-});
 const BankDetailsSchema = z.object({
   bankName: z.string().min(1, "Bank name is required"),
   accountNumber: z.string().min(1, "Account number is required"),
@@ -98,8 +85,7 @@ const TaxInfoSchema = z.object({
 
 export const EmployeeSchema = z.object({
   basic: EmployeeBasicSchema,
-  job: JobDetailsSchema,
-  compensation: CompensationSchema,
+  job: JobDetailsSchema, 
   address: AddressSchema,
   bank: BankDetailsSchema.optional(),
   legal: LegalDetailsSchema.optional(),
@@ -110,8 +96,7 @@ export const EmployeeSchema = z.object({
 
 export const UpdateEmployeeSchema = z.object({
   basic: EmployeeBasicSchema.partial().optional(),
-  job: JobDetailsSchema.partial().optional(),
-  compensation: CompensationSchema.partial().optional(),
+  job: JobDetailsSchema.partial().optional(), 
   address: AddressSchema.partial().optional(),
   bank: BankDetailsSchema.partial().optional(),
   legal: LegalDetailsSchema.partial().optional(),
@@ -121,8 +106,7 @@ export const UpdateEmployeeSchema = z.object({
 });
 
 export const UpdateBankSchema = BankDetailsSchema.partial();
-export const UpdateLegalSchema = LegalDetailsSchema.partial();
-export const UpdateCompensationSchema = CompensationSchema.partial();
+export const UpdateLegalSchema = LegalDetailsSchema.partial(); 
 export const UpdateAddressSchema = AddressSchema.partial();
 
 export const UpdatePayrollInfoSchema = PayrollInfoSchema.partial();
@@ -137,10 +121,7 @@ export const EmployeeIdNumberSchema = z
 export type EmployeeSchemaType = z.infer<typeof EmployeeSchema>;
 export type UpdateEmployeeSchemaType = z.infer<typeof UpdateEmployeeSchema>;
 export type UpdateBankSchemaType = z.infer<typeof UpdateBankSchema>;
-export type UpdateLegalSchemaType = z.infer<typeof UpdateLegalSchema>;
-export type UpdateCompensationSchemaType = z.infer<
-  typeof UpdateCompensationSchema
->;
+export type UpdateLegalSchemaType = z.infer<typeof UpdateLegalSchema>; 
 export type UpdateAddressSchemaType = z.infer<typeof UpdateAddressSchema>;
 export type UpdatePayrollInfoSchemaType = z.infer<
   typeof UpdatePayrollInfoSchema

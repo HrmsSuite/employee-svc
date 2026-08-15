@@ -4,3 +4,7 @@ export * from "./employee.daos";
 export * from "./shift.daos";
 export * from "./teams.daos";
 export * from "./hierarchy.daos";
+export * from "./employee-salary.daos";
+export * from "./salary-component.dao";
+export * from "./salary-structure.dao";
+export * from "./Salary-audit-log.dao";
