@@ -11,7 +11,7 @@ import {
   EmployeeQueryFilters,
   PaginatedEmployees,
 } from "../typings/employee.typings";
-import { AppError } from "../helpers/error";
+import { AppError, ConflictError } from "../helpers/error";
 
 /**
  * Re-throws AppError (NotFoundError / ValidationError / ConflictError /
@@ -20,7 +20,30 @@ import { AppError } from "../helpers/error";
  * Error with a fallback message, same as before.
  */
 function rethrow(error: unknown, fallbackMessage: string): never {
-  if (error instanceof AppError) throw error;
+  if (error instanceof AppError) {
+    throw error;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === 11000
+  ) {
+    const duplicateError = error as {
+      keyPattern?: Record<string, unknown>;
+      keyValue?: Record<string, unknown>;
+    };
+
+    const fields = Object.keys(
+      duplicateError.keyPattern ?? duplicateError.keyValue ?? {},
+    );
+
+    throw new ConflictError(
+      `Duplicate employee value for: ${fields.join(", ") || "a unique field"}`,
+    );
+  }
+
   const message = error instanceof Error ? error.message : fallbackMessage;
   throw new Error(message);
 }
@@ -56,9 +79,7 @@ export class EmployeeServices {
       );
       return createdEmployee;
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to create employee";
-      throw new Error(message);
+      rethrow(error, "Failed to create employee");
     }
   }
 

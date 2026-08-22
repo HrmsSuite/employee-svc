@@ -10,48 +10,86 @@ import {
 const designationDAO = new DesignationDAO();
 
 export class DesignationServices {
-  public async createDesignate(data: Designations, companyId: string): Promise<Designations> {
+  public async createDesignate(
+    data: Designations,
+    companyId: string,
+  ): Promise<Designations> {
     DesignationSchema.parse(data);
 
     try {
-      const createdDesignation = await designationDAO.createDesignantionDao(data, companyId);
+      const createdDesignation = await designationDAO.createDesignantionDao(
+        data,
+        companyId,
+      );
       return createdDesignation;
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to create designation";
+      const message =
+        error instanceof Error ? error.message : "Failed to create designation";
       throw new Error(message);
     }
   }
 
-  public async findAll(companyId: string): Promise<Designations[]> {
+  public async findAll(companyId: string, page: number, limit: number) {
     try {
-      const designations = await designationDAO.findAllDesignation(companyId);
-      return designations;
+      const result = await designationDAO.findAllDesignation(
+        companyId,
+        page,
+        limit,
+      );
+
+      const totalPages = Math.ceil(result.total / limit);
+
+      return {
+        data: result.data,
+        pagination: {
+          page,
+          limit,
+          total: result.total,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      };
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to fetch designations";
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch designations";
+
       throw new Error(message);
     }
   }
 
-  public async findDesignate(id: string, companyId: string): Promise<Designations | null> {
+  public async findDesignate(
+    id: string,
+    companyId: string,
+  ): Promise<Designations | null> {
     DesignationIdSchema.parse(id);
 
     try {
       const designation = await designationDAO.findDesignate(id, companyId);
       return designation;
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to fetch designation by id";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch designation by id";
       throw new Error(message);
     }
   }
 
-  public async findByName(name: string, companyId: string): Promise<Designations | null> {
+  public async findByName(
+    name: string,
+    companyId: string,
+  ): Promise<Designations | null> {
     DesignationNameSchema.parse(name);
 
     try {
       const designation = await designationDAO.findByName(name, companyId);
       return designation;
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to fetch designation by name";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch designation by name";
       throw new Error(message);
     }
   }
@@ -65,10 +103,15 @@ export class DesignationServices {
     UpdateDesignationSchema.parse(data);
 
     try {
-      const updatedDesignation = await designationDAO.updateDesignationDao(id, data, companyId);
+      const updatedDesignation = await designationDAO.updateDesignationDao(
+        id,
+        data,
+        companyId,
+      );
       return updatedDesignation;
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to update designation";
+      const message =
+        error instanceof Error ? error.message : "Failed to update designation";
       throw new Error(message);
     }
   }
@@ -79,7 +122,8 @@ export class DesignationServices {
     try {
       await designationDAO.softDelete(id, companyId);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to delete designation";
+      const message =
+        error instanceof Error ? error.message : "Failed to delete designation";
       throw new Error(message);
     }
   }

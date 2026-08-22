@@ -23,14 +23,20 @@ export class DesignationController {
   ): Promise<void> {
     try {
       const companyId = req.companyId as string;
-      const createdDesignation = await designationServices.createDesignate(req.body, companyId);
+      const createdDesignation = await designationServices.createDesignate(
+        req.body,
+        companyId,
+      );
       res.status(201).json({
         success: true,
         message: "Designation created successfully",
         data: createdDesignation,
       });
     } catch (error) {
-      if (error instanceof ZodError) { handleZodError(error, res); return; }
+      if (error instanceof ZodError) {
+        handleZodError(error, res);
+        return;
+      }
       next(error);
     }
   }
@@ -42,11 +48,27 @@ export class DesignationController {
   ): Promise<void> {
     try {
       const companyId = req.companyId as string;
-      const designations = await designationServices.findAll(companyId);
+
+      const page = Math.max(
+        Number.parseInt(req.query.page as string, 10) || 1,
+        1,
+      );
+
+      const limit = Math.min(
+        Math.max(Number.parseInt(req.query.limit as string, 10) || 10, 1),
+        100,
+      );
+
+      const designations = await designationServices.findAll(
+        companyId,
+        page,
+        limit,
+      );
+
       res.status(200).json({
         success: true,
         message: "Designations fetched successfully",
-        data: designations,
+        ...designations,
       });
     } catch (error) {
       next(error);
@@ -66,9 +88,14 @@ export class DesignationController {
         return;
       }
 
-      const designation = await designationServices.findDesignate(id, companyId);
+      const designation = await designationServices.findDesignate(
+        id,
+        companyId,
+      );
       if (!designation) {
-        res.status(404).json({ success: false, message: "Designation not found" });
+        res
+          .status(404)
+          .json({ success: false, message: "Designation not found" });
         return;
       }
 
@@ -78,7 +105,10 @@ export class DesignationController {
         data: designation,
       });
     } catch (error) {
-      if (error instanceof ZodError) { handleZodError(error, res); return; }
+      if (error instanceof ZodError) {
+        handleZodError(error, res);
+        return;
+      }
       next(error);
     }
   }
@@ -98,7 +128,9 @@ export class DesignationController {
 
       const designation = await designationServices.findByName(name, companyId);
       if (!designation) {
-        res.status(404).json({ success: false, message: "Designation not found" });
+        res
+          .status(404)
+          .json({ success: false, message: "Designation not found" });
         return;
       }
 
@@ -108,7 +140,10 @@ export class DesignationController {
         data: designation,
       });
     } catch (error) {
-      if (error instanceof ZodError) { handleZodError(error, res); return; }
+      if (error instanceof ZodError) {
+        handleZodError(error, res);
+        return;
+      }
       next(error);
     }
   }
@@ -126,9 +161,15 @@ export class DesignationController {
         return;
       }
 
-      const updatedDesignation = await designationServices.updateDesignate(id, req.body.data, companyId);
+      const updatedDesignation = await designationServices.updateDesignate(
+        id,
+        req.body.data,
+        companyId,
+      );
       if (!updatedDesignation) {
-        res.status(404).json({ success: false, message: "Designation not found" });
+        res
+          .status(404)
+          .json({ success: false, message: "Designation not found" });
         return;
       }
 
@@ -138,7 +179,10 @@ export class DesignationController {
         data: updatedDesignation,
       });
     } catch (error) {
-      if (error instanceof ZodError) { handleZodError(error, res); return; }
+      if (error instanceof ZodError) {
+        handleZodError(error, res);
+        return;
+      }
       next(error);
     }
   }
@@ -162,7 +206,10 @@ export class DesignationController {
         message: "Designation deleted successfully",
       });
     } catch (error) {
-      if (error instanceof ZodError) { handleZodError(error, res); return; }
+      if (error instanceof ZodError) {
+        handleZodError(error, res);
+        return;
+      }
       next(error);
     }
   }

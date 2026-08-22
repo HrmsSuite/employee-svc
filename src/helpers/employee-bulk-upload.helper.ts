@@ -10,7 +10,7 @@ import {
 } from "@hrmssuite/persistence";
 import { Types } from "mongoose";
 
-import { COLUMN_DEFS } from "./excel-template.helper";  
+import { COLUMN_DEFS } from "./excel-template.helper";
 import { BusinessRuleError } from "./error";
 
 interface ParsedEmployeeRow {
@@ -145,7 +145,7 @@ export async function processEmployeeBulkUpload(
 
   // 3) Build header map
   const HEADER_ROW_INDEX = 2;
-  const DATA_START_ROW_INDEX = 4;
+  const DATA_START_ROW_INDEX = 3;
 
   const headerRow = dataSheet.getRow(HEADER_ROW_INDEX);
   const headerMap: Record<string, number> = {};
@@ -257,6 +257,22 @@ function rowIsEmpty(row: ExcelJS.Row, maxCols: number): boolean {
   return true;
 }
 
+function extractCellString(raw: ExcelJS.CellValue): string {
+  if (raw === null || raw === undefined) return "";
+  if (raw instanceof Date) return raw.toISOString();
+
+  if (typeof raw === "object") {
+    const obj = raw as any;
+    if ("result" in obj) return obj.result != null ? String(obj.result) : "";
+    if ("richText" in obj && Array.isArray(obj.richText))
+      return obj.richText.map((rt: any) => rt.text).join("");
+    if ("text" in obj) return String(obj.text);
+    if ("error" in obj) return "";
+    return "";
+  }
+  return raw.toString();
+}
+
 function parseRow(
   row: ExcelJS.Row,
   headerMap: Record<string, number>,
@@ -277,10 +293,7 @@ function parseRow(
       continue;
     }
 
-    const strVal =
-      typeof raw === "object" && "result" in (raw as any)
-        ? String((raw as any).result)
-        : raw.toString();
+    const strVal = extractCellString(raw).trim();
 
     switch (colDef.type) {
       case "text":
@@ -394,6 +407,12 @@ function parseRow(
       }
       leavepolicy.push(id);
     }
+  }
+
+  if (leavepolicy.length === 0) {
+    throw new BusinessRuleError(
+      `At least one leave policy is required at row ${rowNumber}`,
+    );
   }
 
   // Reporting manager

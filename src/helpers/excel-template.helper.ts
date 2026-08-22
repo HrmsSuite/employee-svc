@@ -240,16 +240,6 @@ export const COLUMN_DEFS: ColumnDef[] = [
     sample: "Manual",
   },
   {
-    key: "weeklyOff",
-    header: "Weekly Off Days",
-    field: "job.weeklyOff",
-    required: false,
-    width: 22,
-    type: "text",
-    note: "Optional. Comma-separated day names (e.g. Saturday,Sunday).",
-    sample: "Saturday,Sunday",
-  },
-  {
     key: "dateOfExit",
     header: "Date of Exit",
     field: "job.dateOfExit",
@@ -791,16 +781,12 @@ export async function generateEmployeeTemplate(
       );
     }
 
-    // ── Lookup / multiLookup: range-based dropdown from __Lookups ─────────
-    if (
-      (col.type === "lookup" || col.type === "multiLookup") &&
-      col.key in lookupColMap
-    ) {
+    // ── Lookup: strict single-select dropdown ──────────────────────────────
+    if (col.type === "lookup" && col.key in lookupColMap) {
       const lKey = col.key as LookupKey;
       const lookupNames = lookupData[lKey];
       if (lookupNames.length > 0) {
         const lCol = colIdxToLetter(lookupColMap[lKey]);
-        // Rows 2..(n+1) in __Lookups (row 1 is the header label)
         const lastLookupRow = lookupNames.length + 1;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (dataSheet as any).dataValidations.add(
@@ -810,13 +796,35 @@ export async function generateEmployeeTemplate(
             allowBlank: !col.required,
             formulae: [`__Lookups!$${lCol}$2:$${lCol}$${lastLookupRow}`],
             showErrorMessage: true,
-            errorStyle: col.required ? "stop" : "warning",
-            errorTitle: col.required
-              ? "Selection required"
-              : "Unrecognised value",
-            error: col.required
-              ? `Please select a valid ${col.header.replace(" *", "")} from the dropdown.`
-              : `"${col.header}" value not found in the list. Leave blank or choose from the dropdown.`,
+            errorStyle: "stop",
+            errorTitle: "Selection required",
+            error: `Please select a valid ${col.header.replace(" *", "")} from the dropdown.`,
+          },
+        );
+      }
+    }
+
+    // ── multiLookup: reference dropdown only — never blocks entry, since ──
+    // ── users legitimately type comma-separated values here.             ──
+    if (col.type === "multiLookup" && col.key in lookupColMap) {
+      const lKey = col.key as LookupKey;
+      const lookupNames = lookupData[lKey];
+      if (lookupNames.length > 0) {
+        const lCol = colIdxToLetter(lookupColMap[lKey]);
+        const lastLookupRow = lookupNames.length + 1;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (dataSheet as any).dataValidations.add(
+          `${excelCol}4:${excelCol}${MAX_ROWS}`,
+          {
+            type: "list",
+            allowBlank: !col.required,
+            formulae: [`__Lookups!$${lCol}$2:$${lCol}$${lastLookupRow}`],
+            showErrorMessage: true,
+            errorStyle: "warning",
+            errorTitle: "Multiple values?",
+            error: `Pick one from the dropdown, or type multiple ${col.header
+              .replace(" *", "")
+              .toLowerCase()} separated by commas (e.g. "${col.sample}").`,
           },
         );
       }
